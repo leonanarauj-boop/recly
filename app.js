@@ -1268,6 +1268,69 @@ const Shop = (() => {
   return { catalog };
 })();
 
+// Instalação na tela inicial: Android/Chrome usa o prompt nativo; iPhone mostra o guia.
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+window.addEventListener('appinstalled', () => { installPrompt = null; if (typeof currentTab !== 'undefined' && currentTab === 'more') refresh(); });
+const isStandalone = () => !!(window.navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+function platformInfo() {
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const inApp = /Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|WhatsApp|LinkedInApp|Snapchat|Twitter/i.test(ua);
+  const chromeIOS = ios && /CriOS/.test(ua), otherIOS = ios && /FxiOS|EdgiOS|OPiOS/.test(ua);
+  return { ios, inApp, chromeIOS, otherIOS, ipad: /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) };
+}
+const SVG_SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+const SVG_ADD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+const SVG_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+async function installApp() {
+  if (isStandalone()) return alertBox('O Recly já está instalado na sua tela inicial. 🎉', 'Instalado');
+  if (installPrompt) {
+    const p = installPrompt; installPrompt = null;
+    try { await p.prompt(); const r = await p.userChoice; if (r && r.outcome === 'accepted') toast('Recly instalado ✓'); } catch (e) { installGuide(); }
+    return refresh();
+  }
+  installGuide();
+}
+
+function installGuide() {
+  const pf = platformInfo();
+  const step = (n, icon, title, sub) => h('li', { class: 'ig-step' }, h('span', { class: 'ig-n' }, String(n)),
+    h('div', null, h('b', null, title, icon ? h('span', { class: 'ig-ico', html: icon }) : null), sub ? h('small', null, sub) : null));
+  let body;
+  if (pf.inApp) {
+    body = [h('p', { class: 'muted' }, 'Você abriu o Recly dentro de outro app (Instagram, WhatsApp…). Para instalar, abra no navegador:'),
+      h('ol', { class: 'ig-list' },
+        step(1, SVG_DOTS, 'Toque no menu ', 'Fica no canto da tela (••• ou ⋮).'),
+        step(2, null, pf.ios ? 'Escolha “Abrir no Safari”' : 'Escolha “Abrir no navegador”'),
+        step(3, null, 'Toque de novo em “Instalar na tela inicial”', 'Na aba Mais do Recly.')),
+      h('button', { class: 'btn wide', onclick: async () => { try { await navigator.clipboard.writeText(location.href); toast('Link copiado'); } catch (e) { toast(location.href); } } }, '🔗 Copiar link do Recly')];
+  } else if (pf.ios) {
+    const where = pf.chromeIOS ? 'no canto superior direito, ao lado do endereço' : pf.ipad ? 'no topo do Safari' : 'na barra do Safari (embaixo ou em cima)';
+    body = [h('p', { class: 'muted' }, 'São só 3 toques. O ícone do Recly vai aparecer junto com os seus apps.'),
+      h('ol', { class: 'ig-list' },
+        step(1, SVG_SHARE, 'Toque em Compartilhar ', `Fica ${where}. Se não aparecer, toque em ••• e depois em Compartilhar.`),
+        step(2, SVG_ADD, 'Toque em “Adicionar à Tela de Início” ', 'Se não estiver visível, role a lista para baixo (ou toque em “Ver mais”).'),
+        step(3, null, 'Toque em “Adicionar”', 'No canto superior direito. Pronto!')),
+      pf.otherIOS ? h('p', { class: 'muted s' }, 'Se o seu navegador não tiver essa opção, abra o Recly no Safari.') : null];
+  } else {
+    body = [h('p', { class: 'muted' }, 'Instale pelo menu do navegador:'),
+      h('ol', { class: 'ig-list' },
+        step(1, SVG_DOTS, 'Abra o menu do navegador ', 'Ícone ⋮ ou ••• no canto da tela.'),
+        step(2, SVG_ADD, 'Toque em “Instalar app” ', 'Ou “Adicionar à tela inicial”.'),
+        step(3, null, 'Confirme em “Instalar”'))];
+  }
+  const m = modal([h('div', { class: 'ig-head' }, h('img', { src: 'apple-touch-icon.png', alt: '' }), h('div', null, h('h3', null, 'Instalar o Recly'), h('small', null, 'Abre em tela cheia e funciona offline'))),
+    ...body, h('button', { class: 'btn primary wide', onclick: () => m.close() }, 'Entendi')]);
+}
+
+function installCard() {
+  if (isStandalone()) return h('div', { class: 'card2 ig-card ok' }, h('span', { class: 'ig-big' }, '✓'), h('div', null, h('b', null, 'Recly instalado'), h('small', null, 'O app está na sua tela inicial e funciona offline.')));
+  return h('button', { class: 'card2 ig-card', onclick: installApp }, h('img', { src: 'apple-touch-icon.png', alt: '' }),
+    h('div', null, h('b', null, 'Instalar na tela inicial'), h('small', null, installPrompt ? 'Instale com um toque' : 'Tenha o Recly como um app no seu celular')), h('span', { class: 'ig-go' }, '›'));
+}
+
 // Interface: utilitários, lista de baralhos e tela de estudo.
 const $ = (s, el = document) => el.querySelector(s);
 function h(tag, props, ...kids) {
@@ -1781,6 +1844,7 @@ async function viewMore(v) {
   let persisted = false; try { persisted = await navigator.storage.persisted(); } catch (e) { /* ignore */ }
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   v.append(h('header', { class: 'top' }, h('h1', null, 'Mais')),
+    installCard(),
     h('div', { class: 'card2' }, h('h3', null, 'Backup'),
       h('p', { class: 'muted' }, 'Os dados ficam só neste aparelho. Faça backup de tempos em tempos (e antes de limpar dados do Safari).'),
       h('div', { class: 'col' },
@@ -1791,7 +1855,7 @@ async function viewMore(v) {
           const b = busy('Restaurando…'); try { const r = await Apkg.restore(f, t => b.set(t)); b.close(); await alertBox(`Restaurado: ${r.notes} notas, ${r.cards} cartões, ${r.media} arquivos de mídia.`); go('decks'); } catch (e) { b.close(); alertBox('Erro: ' + e.message); }
         } }, '⬇ Restaurar backup'))),
     h('div', { class: 'card2' }, h('h3', null, 'Status'),
-      h('p', { class: 'muted pre' }, [usage, persisted ? 'Armazenamento persistente: sim' : 'Armazenamento persistente: não garantido', standalone ? 'Instalado na tela inicial: sim' : 'Dica: toque em Compartilhar › “Adicionar à Tela de Início” para instalar.', 'Funciona offline após o primeiro carregamento.'].filter(Boolean).join('\n'))),
+      h('p', { class: 'muted pre' }, [usage, persisted ? 'Armazenamento persistente: sim' : 'Armazenamento persistente: não garantido', standalone ? 'Instalado na tela inicial: sim' : 'Instalado na tela inicial: não', 'Funciona offline após o primeiro carregamento.'].filter(Boolean).join('\n'))),
     h('div', { class: 'card2' }, h('h3', null, 'Zona de perigo'),
       h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox('Apagar TODOS os baralhos, cartões e mídia deste aparelho?', 'Apagar tudo', true)) { await Store.resetAll(); go('decks'); } } }, '🗑 Apagar todos os dados')),
     h('p', { class: 'muted center' }, 'Recly · app web offline compatível com .apkg'));
