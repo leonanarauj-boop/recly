@@ -9,7 +9,7 @@
       "badge": "Mais vendido",
       "price": "R$ 112,90",
       "oldPrice": "149,90",
-      "installments": "até 12 vezes",
+      "installments": "em até 12 vezes",
       "image": "https://static-media.hotmart.com/AiwNuRTTBJ-RjG_YIUYq6WO4jzU=/300x300/smart/filters:format(webp):background_color(white)/hotmart/product_pictures/cab25d86-61a5-4dd8-b27c-86ad2eb4e44e/PosterTJSPRevisao360Escrevente.png?w=920",
       "color": "#2563eb",
       "cards": 16600,
@@ -53,7 +53,7 @@
   "badge": "",
   "price": "R$ 97,90",
   "oldPrice": "119,90",
-  "installments": "até 12 vezes",
+  "installments": "em até 12 vezes",
   "image": "https://cdn.eduzzcdn.com/myeduzz/upload/dd/2a/dd2accd9e1014d238d76d6e941346942",
   "color": "#2563eb",
   "cards": null,
@@ -112,7 +112,87 @@
       "a": "Sim. Existe uma amostra gratuita para conhecer a metodologia do Destruindo Flashcards antes de adquirir o material."
     }
   ]
+},
+
+
+    
+    
+{
+  "title": "INSS · Baralho Anki",
+  "subtitle": "8.125 flashcards para sua preparação",
+  "category": "Concursos · INSS",
+  "coverTitle": "INSS 8.125 Cards",
+  "badge": "8.125 cards",
+  "price": "R$ 89,90",
+  "oldPrice": "119,90",
+  "installments": "em até 12 vezes",
+  "image": "https://cdn.eduzzcdn.com/myeduzz/upload/fc/6f/fc6ffddbd191443aa0e3690003e5aed2",
+  "color": "#2563eb",
+  "cards": 8125,
+  "subjects": "Conhecimentos Específicos, Português, Informática, Direito Administrativo, Direito Constitucional, Raciocínio Lógico e Ética no Serviço Público",
+  "checkout": "https://chk.eduzz.com/8017A87Q07?a=60563966",
+  "sample": "amostras/inss-2027.apkg",
+  "desc": "Potencialize sua preparação para o concurso do INSS com um baralho completo de 8.125 flashcards, organizado com foco no conteúdo do último edital. São sete disciplinas reunidas em um único material digital, com cartões separados por matérias e subpastas para facilitar a organização dos estudos. Utilize o sistema de repetição espaçada do Anki para revisar os conteúdos, reforçar a memorização e acompanhar sua evolução. O arquivo .apkg está pronto para importação, permitindo começar a estudar sem precisar criar seus próprios cartões. Mais organização, praticidade e conteúdo para fortalecer sua preparação.",
+  "benefits": [
+    "8.125 flashcards organizados em um único material",
+    "Sete disciplinas contempladas no último edital",
+    "Conteúdo dividido por matérias e subpastas",
+    "Repetição espaçada para reforçar a memorização",
+    "Arquivo .apkg pronto para importação no Anki",
+    "Estude pelo computador ou celular",
+    "Material digital para revisar no seu próprio ritmo"
+  ],
+  "topics": [
+    "Conhecimentos Específicos — 2.406 cards",
+    "Português — 2.407 cards",
+    "Informática — 2.011 cards",
+    "Direito Administrativo — 563 cards",
+    "Direito Constitucional — 339 cards",
+    "Raciocínio Lógico — 317 cards",
+    "Ética no Serviço Público — 82 cards"
+  ],
+  "includes": [
+    "Baralho digital completo com 8.125 flashcards",
+    "Arquivo .apkg pronto para importação no Anki",
+    "Sete disciplinas organizadas por matérias e subpastas"
+  ],
+  "guarantee": "",
+  "faq": [
+    {
+      "q": "Quantos flashcards estão incluídos?",
+      "a": "O material contém 8.125 flashcards distribuídos entre sete disciplinas do concurso do INSS."
+    },
+    {
+      "q": "Quais matérias estão contempladas?",
+      "a": "Conhecimentos Específicos, Português, Informática, Direito Administrativo, Direito Constitucional, Raciocínio Lógico e Ética no Serviço Público."
+    },
+    {
+      "q": "Como recebo o material?",
+      "a": "Após a confirmação do pagamento, você recebe acesso ao arquivo digital para baixar e importar no Anki."
+    },
+    {
+      "q": "Como faço para utilizar os flashcards?",
+      "a": "Baixe o arquivo .apkg e importe-o no Anki. Os cartões estarão organizados para você começar suas revisões."
+    },
+    {
+      "q": "Preciso criar os cartões manualmente?",
+      "a": "Não. O baralho já está pronto e configurado para importação, sem necessidade de criar os flashcards individualmente."
+    },
+    {
+      "q": "Posso estudar pelo celular?",
+      "a": "Sim. O Anki possui versões para computador e dispositivos móveis compatíveis."
+    },
+    {
+      "q": "Como funciona a repetição espaçada?",
+      "a": "O Anki programa as revisões dos cartões conforme seu desempenho, ajudando a reforçar os conteúdos e evitar o esquecimento."
+    }
+  ]
 }
+
+
+
+
+    
 
   ]
 }
