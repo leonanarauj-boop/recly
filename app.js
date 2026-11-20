@@ -24,6 +24,7 @@ const SQLite = (() => {
   }
 
   function parseCols(sql) {
+    sql = sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' '); // ignora comentários (/* 0 */ etc.)
     const s = sql.slice(sql.indexOf('(') + 1, sql.lastIndexOf(')'));
     const parts = [];
     let depth = 0, cur = '';
