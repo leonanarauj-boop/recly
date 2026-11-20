@@ -9,14 +9,14 @@
       "badge": "Mais vendido",
       "price": "R$ 112,90",
       "oldPrice": "149,90",
-      "installments": "12",
+      "installments": "até 12 vezes",
       "image": "https://static-media.hotmart.com/AiwNuRTTBJ-RjG_YIUYq6WO4jzU=/300x300/smart/filters:format(webp):background_color(white)/hotmart/product_pictures/cab25d86-61a5-4dd8-b27c-86ad2eb4e44e/PosterTJSPRevisao360Escrevente.png?w=920",
       "color": "#2563eb",
       "cards": 16600,
       "subjects": "",
       "checkout": "https://pay.kiwify.com.br/e6tqU0H",
       "sample": "amostras/tjsp-escrevente-2027.apkg",
-      "desc": "Mais de 11 mil cartões organizados por matéria e assunto, prontos para estudar offline no seu iPhone.\nO Recly mostra cada cartão na hora certa com revisão espaçada, para você memorizar mais estudando menos.",
+      "desc": "Mais de 16 mil cartões organizados por matéria e assunto, prontos para estudar offline no seu iPhone.\nO Recly mostra cada cartão na hora certa com revisão espaçada, para você memorizar mais estudando menos.",
       "benefits": [
         "Estude em qualquer lugar, mesmo sem internet",
         "Revisão espaçada: cada cartão aparece na hora certa",
@@ -40,6 +40,83 @@
           "a": "Após o pagamento, você recebe o arquivo .apkg. É só salvar em Arquivos e tocar em Importar no Recly."
         }
       ]
+    },
+
+
+
+
+{
+  "title": "TJSP · Oficial de Justiça",
+  "subtitle": "Estude o edital completo com flashcards no Anki",
+  "category": "Concursos · TJSP",
+  "coverTitle": "Oficial de Justiça TJSP",
+  "badge": "",
+  "price": "R$ 97,90",
+  "oldPrice": "119,90",
+  "installments": "até 12 vezes",
+  "image": "https://cdn.eduzzcdn.com/myeduzz/upload/dd/2a/dd2accd9e1014d238d76d6e941346942",
+  "color": "#2563eb",
+  "cards": null,
+  "subjects": "Conteúdo do edital do concurso de Oficial de Justiça TJSP",
+  "checkout": "https://chk.eduzz.com/Q9N28AVK01?a=60563966",
+  "sample": "",
+  "desc": "Prepare-se para o concurso de Oficial de Justiça do TJSP estudando o conteúdo do edital por meio de flashcards no Anki. O baralho reúne questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização. Com conteúdo organizado por matérias e assuntos, você consegue revisar os temas de maneira ativa, identificar pontos que precisam de mais atenção e reforçar a fixação do conhecimento por meio de revisões espaçadas. Estude pelo computador ou celular e leve sua preparação para qualquer lugar.",
+  "benefits": [
+    "Estude o conteúdo do edital completo por meio de flashcards",
+    "Questões de certo ou errado para testar seus conhecimentos",
+    "Explicações e fundamentação legal para compreender cada assunto",
+    "Exemplos práticos e pegadinhas para aprofundar o aprendizado",
+    "Dicas de memorização para facilitar a fixação dos conteúdos",
+    "Revisões espaçadas com o sistema de repetição do Anki",
+    "Estude pelo computador ou celular, no seu próprio ritmo"
+  ],
+  "topics": [
+    "Questões de certo ou errado",
+    "Explicações dos conteúdos",
+    "Fundamentação legal",
+    "Exemplos práticos",
+    "Pegadinhas de prova",
+    "Dicas de memorização",
+    "Conteúdo organizado por matérias e assuntos do edital"
+  ],
+  "includes": [
+    "Baralho digital do Anki em formato .apkg",
+    "Flashcards organizados por matérias e assuntos",
+    "Acesso ao material por e-mail e pela área de membros da Eduzz",
+    "Possibilidade de importar o baralho no Anki para computador ou celular"
+  ],
+  "guarantee": "",
+  "faq": [
+    {
+      "q": "O que é o baralho Anki?",
+      "a": "É um conjunto de flashcards digitais para estudar os conteúdos do edital por meio de perguntas, respostas e revisões espaçadas."
+    },
+    {
+      "q": "O que encontro nos flashcards?",
+      "a": "Questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização."
+    },
+    {
+      "q": "Preciso de internet para estudar?",
+      "a": "O material é baixado e importado no Anki. Depois da configuração e sincronização inicial, o estudo pode ser realizado offline."
+    },
+    {
+      "q": "O Anki é gratuito?",
+      "a": "Sim. O Anki para computador e Android é gratuito. No iPhone, o aplicativo oficial AnkiMobile é pago."
+    },
+    {
+      "q": "Como recebo o material?",
+      "a": "Após a confirmação do pagamento, o acesso é enviado por e-mail e disponibilizado na área de membros da Eduzz."
+    },
+    {
+      "q": "Posso estudar pelo celular e computador?",
+      "a": "Sim. O arquivo .apkg pode ser importado no Anki para computador e utilizado em dispositivos móveis compatíveis."
+    },
+    {
+      "q": "Posso testar antes de comprar?",
+      "a": "Sim. Existe uma amostra gratuita para conhecer a metodologia do Destruindo Flashcards antes de adquirir o material."
     }
+  ]
+}
+
   ]
 }
