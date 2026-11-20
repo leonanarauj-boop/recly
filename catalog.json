@@ -4,14 +4,15 @@
     {
       "title": "TJSP · Escrevente Técnico Judiciário 2027",
       "subtitle": "Baralho completo para revisão espaçada",
+      "category": "Concursos · TJSP",
+      "coverTitle": "Escrevente TJSP 2027",
       "badge": "Mais vendido",
       "price": "R$ 112,90",
-      "oldPrice": "",
-      "installments": "",
-      "image": "",
-      "emoji": "⚖️",
+      "oldPrice": "149,90",
+      "installments": "12",
+      "image": "https://static-media.hotmart.com/AiwNuRTTBJ-RjG_YIUYq6WO4jzU=/300x300/smart/filters:format(webp):background_color(white)/hotmart/product_pictures/cab25d86-61a5-4dd8-b27c-86ad2eb4e44e/PosterTJSPRevisao360Escrevente.png?w=920",
       "color": "#2563eb",
-      "cards": 11000,
+      "cards": 16600,
       "subjects": "",
       "checkout": "https://pay.kiwify.com.br/e6tqU0H",
       "sample": "amostras/tjsp-escrevente-2027.apkg",
@@ -23,13 +24,21 @@
         "Estatísticas de progresso e sequência de dias",
         "Compra única, sem mensalidade"
       ],
+      "topics": [],
       "includes": [
         "Arquivo .apkg com o baralho completo",
         "Compatível também com o Anki do computador"
       ],
+      "guarantee": "",
       "faq": [
-        { "q": "Preciso de internet para estudar?", "a": "Não. Depois de importar o baralho, tudo funciona offline." },
-        { "q": "Como recebo o baralho?", "a": "Após o pagamento, você recebe o arquivo .apkg. É só salvar em Arquivos e tocar em Importar no Recly." }
+        {
+          "q": "Preciso de internet para estudar?",
+          "a": "Não. Depois de importar o baralho, tudo funciona offline."
+        },
+        {
+          "q": "Como recebo o baralho?",
+          "a": "Após o pagamento, você recebe o arquivo .apkg. É só salvar em Arquivos e tocar em Importar no Recly."
+        }
       ]
     }
   ]

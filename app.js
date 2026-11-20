@@ -2074,15 +2074,38 @@ function shareCard(s, goal, startKind) {
 
 // Aba "Loja": vitrine em 2 colunas + página de produto em tela cheia.
 const money = s => String(s || '').trim();
-function shopCover(it, cls) {
+const ICONS = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+  zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
+  infinity: '<path d="M18.2 8.5a4.5 4.5 0 1 1 0 7c-2.2-1.6-4.2-5.4-6.2-7a4.5 4.5 0 1 0 0 7c2-1.6 4-5.4 6.2-7Z"/>',
+  offline: '<path d="M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.7M19 12.9a10 10 0 0 0-2.3-1.7M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M2 2l20 20"/>',
+  cards: '<rect x="3" y="6" width="13" height="15" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v13"/>',
+  book: '<path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6.5a2.5 2.5 0 0 0 0 5H20"/>',
+  repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  cart: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>',
+  pkg: '<path d="m7.5 4.3 9 5.2M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
+};
+const ico = (n, cls = 'ic') => h('span', { class: cls, html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>` });
+
+/** Capa: a imagem do produto; sem imagem, uma capa gerada com o nome do baralho. */
+function shopCover(it, cls, withBadge = true) {
   const c1 = it.color || '#2563eb';
-  const box = h('div', { class: cls, style: `background:linear-gradient(135deg,${c1},${c1}99)` }, h('span', { class: 'pemoji' }, it.emoji || '📘'));
+  const box = h('div', { class: cls + ' gen', style: `--c:${c1}` },
+    h('div', { class: 'gtop' }, h('span', null, 'Recly'), it.category ? h('span', null, it.category) : null),
+    h('div', { class: 'gtitle' }, it.coverTitle || it.title),
+    it.cards ? h('div', { class: 'gfoot' }, `${Number(it.cards).toLocaleString('pt-BR')} cartões`) : null);
   if (it.image) {
-    const img = h('img', { src: it.image, alt: '', loading: 'lazy' });
+    const img = h('img', { src: it.image, alt: it.title || '', loading: 'lazy' });
+    img.onload = () => box.classList.remove('gen');
     img.onerror = () => img.remove();
     box.append(img);
   }
-  if (it.badge) box.append(h('b', { class: 'pbadge' }, it.badge));
+  if (withBadge && it.badge) box.append(h('b', { class: 'pbadge' }, it.badge));
   return box;
 }
 function discountOf(it) {
@@ -2113,7 +2136,7 @@ async function viewShop(v) {
         h('div', { class: 'ptitle' }, it.title),
         it.subtitle ? h('div', { class: 'psub' }, it.subtitle) : null,
         h('div', { class: 'pprice' }, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price)), off ? h('i', null, `-${off}%`) : null),
-        it.sample ? h('div', { class: 'psample' }, '🎁 Baixe a amostra grátis') : null));
+        it.sample ? h('div', { class: 'psample' }, ico('gift', 'ic s'), 'Baixe a amostra grátis') : null));
   })));
   box.append(h('p', { class: 'muted center s' }, 'Toque em um baralho para ver todos os detalhes.'));
 }
@@ -2121,36 +2144,50 @@ async function viewShop(v) {
 function productPage(it) {
   const off = discountOf(it);
   const buy = () => it.checkout ? window.open(it.checkout, '_blank', 'noopener') : alertBox('Link de compra indisponível.');
-  const facts = [it.cards ? ['🃏', Number(it.cards).toLocaleString('pt-BR'), 'cartões'] : null,
-    it.subjects ? ['📚', String(it.subjects), 'matérias'] : null, ['📶', 'Offline', 'sem internet'], ['🔁', 'Revisão', 'espaçada']].filter(Boolean).slice(0, 4);
-  const list = (title, arr, ic) => arr && arr.length ? h('section', { class: 'psec' }, h('h3', null, title), h('ul', { class: 'plist' }, arr.map(x => h('li', null, h('span', null, ic), h('div', null, x))))) : null;
+  const sec = (title, ...kids) => h('section', { class: 'xsec' }, h('h3', null, title), ...kids);
+  const priceBlock = cls => h('div', { class: cls },
+    it.oldPrice || off ? h('div', { class: 'xold' }, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, off ? h('i', null, `${off}% OFF`) : null) : null,
+    h('div', { class: 'xnow' }, money(it.price)),
+    it.installments ? h('div', { class: 'xinst' }, it.installments) : null);
+  const stats = [it.cards ? ['cards', Number(it.cards).toLocaleString('pt-BR'), 'cartões'] : null,
+    it.subjects ? ['book', String(it.subjects), 'matérias'] : null,
+    ['offline', 'Offline', 'estude sem internet'], ['repeat', 'Revisão', 'espaçada inteligente']].filter(Boolean).slice(0, 4);
+  const trust = [['zap', 'Acesso imediato'], ['infinity', 'Compra única'], it.guarantee ? ['shield', 'Garantia'] : ['offline', 'Funciona offline']];
+  const steps = [it.sample ? ['Experimente', 'Baixe a amostra grátis e estude alguns cartões.'] : null,
+    ['Compre', 'Toque em “Comprar agora” e finalize pela Kiwify (Pix ou cartão).'],
+    ['Baixe', 'Salve o arquivo .apkg recebido após a compra no app Arquivos.'],
+    ['Importe', 'No Recly, toque em “Importar” e escolha o arquivo. Pronto!']].filter(Boolean);
+
   const ov = h('div', { class: 'ppage' });
+  const bar = h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: () => close() }, ico('back', 'ic'), 'Loja'), h('span', { class: 'pbt' }, it.title));
   const close = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 220); };
-  ov.append(
-    h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: close }, '‹ Loja'), h('span', null, it.title)),
-    h('div', { class: 'pscroll' },
-      shopCover(it, 'phero'),
-      h('div', { class: 'pmain' },
-        h('h2', { class: 'ph-title' }, it.title),
-        it.subtitle ? h('p', { class: 'ph-sub' }, it.subtitle) : null,
-        h('div', { class: 'ph-price' }, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price)), off ? h('i', null, `-${off}%`) : null),
-        it.installments ? h('div', { class: 'muted' }, it.installments) : null,
-        h('div', { class: 'pfacts' }, facts.map(([ic, a, b]) => h('div', null, h('span', null, ic), h('b', null, a), h('small', null, b)))),
-        h('div', { class: 'pbtns' },
-          h('button', { class: 'btn primary big wide', onclick: buy }, '🛒 Comprar agora'),
-          it.sample ? h('button', { class: 'btn big wide psamplebtn', onclick: () => importSample(it) }, '🎁 Baixar amostra grátis') : null),
-        it.desc ? h('section', { class: 'psec' }, h('h3', null, 'Sobre o baralho'), String(it.desc).split(/\n+/).map(p => h('p', null, p))) : null,
-        list('Vantagens', it.benefits, '✅'),
-        list('O que você recebe', it.includes, '📦'),
-        h('section', { class: 'psec' }, h('h3', null, 'Como funciona'),
-          h('ol', { class: 'steps' }, it.sample ? h('li', null, 'Quer conhecer antes? Baixe a amostra grátis e estude alguns cartões.') : null,
-            h('li', null, 'Toque em “Comprar agora” e finalize o pagamento (Pix ou cartão).'),
-            h('li', null, 'Baixe o arquivo do baralho (.apkg) enviado após a compra e salve em Arquivos.'),
-            h('li', null, 'No Recly, toque em “Importar” e escolha o arquivo. Pronto: estude offline.'))),
-        it.faq && it.faq.length ? h('section', { class: 'psec' }, h('h3', null, 'Perguntas frequentes'),
-          it.faq.map(f => h('details', { class: 'pfaq' }, h('summary', null, f.q), h('p', null, f.a)))) : null)),
+  const scroll = h('div', { class: 'pscroll' },
+    h('div', { class: 'xwrap' },
+      h('div', { class: 'xhero' }, shopCover(it, 'phero', false)),
+      h('div', { class: 'xhead' },
+        h('div', { class: 'xtags' }, it.badge ? h('span', { class: 'xtag hot' }, it.badge) : null, it.category ? h('span', { class: 'xtag' }, it.category) : null),
+        h('h1', { class: 'xtitle' }, it.title),
+        it.subtitle ? h('p', { class: 'xsub' }, it.subtitle) : null),
+      h('div', { class: 'xbuy' },
+        priceBlock('xprice'),
+        h('button', { class: 'btn primary big wide xcta', onclick: buy }, ico('cart', 'ic'), 'Comprar agora'),
+        it.sample ? h('button', { class: 'btn big wide xsample', onclick: () => importSample(it) }, ico('gift', 'ic'), 'Baixar amostra grátis') : null,
+        h('div', { class: 'xsecure' }, ico('lock', 'ic s'), 'Pagamento seguro processado pela Kiwify')),
+      h('div', { class: 'xtrust' }, trust.map(([i, t]) => h('div', null, ico(i, 'ic'), h('span', null, t)))),
+      sec('Destaques', h('div', { class: 'xstats' }, stats.map(([i, a, b]) => h('div', null, ico(i, 'ic'), h('b', null, a), h('small', null, b))))),
+      it.desc ? sec('Sobre este baralho', h('div', { class: 'xdesc' }, String(it.desc).split(/\n+/).map(p => h('p', null, p)))) : null,
+      it.benefits && it.benefits.length ? sec('Por que escolher', h('ul', { class: 'xchecks' }, it.benefits.map(b => h('li', null, ico('check', 'ic ok'), h('span', null, b))))) : null,
+      it.topics && it.topics.length ? sec('Conteúdo', h('ol', { class: 'xtopics' }, it.topics.map(t => h('li', null, t)))) : null,
+      it.includes && it.includes.length ? sec('O que você recebe', h('ul', { class: 'xchecks' }, it.includes.map(b => h('li', null, ico('pkg', 'ic'), h('span', null, b))))) : null,
+      sec('Como funciona', h('ol', { class: 'xsteps' }, steps.map(([t, d]) => h('li', null, h('b', null, t), h('span', null, d))))),
+      it.guarantee ? h('section', { class: 'xsec xguar' }, ico('shield', 'ic big'), h('div', null, h('h3', null, 'Compra garantida'), h('p', null, it.guarantee))) : null,
+      it.faq && it.faq.length ? sec('Perguntas frequentes', h('div', { class: 'xfaq' }, it.faq.map(f => h('details', null, h('summary', null, h('span', null, f.q), ico('chev', 'ic s')), h('p', null, f.a))))) : null,
+      h('section', { class: 'xsec xend' }, h('h3', null, 'Pronto para começar?'), h('p', null, it.title),
+        priceBlock('xprice c'), h('button', { class: 'btn primary big wide xcta', onclick: buy }, ico('cart', 'ic'), 'Comprar agora'))));
+  scroll.addEventListener('scroll', () => bar.classList.toggle('t', scroll.scrollTop > 260), { passive: true });
+  ov.append(bar, scroll,
     h('div', { class: 'pfoot' }, h('div', null, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price))),
-      h('button', { class: 'btn primary', onclick: buy }, 'Comprar')));
+      h('button', { class: 'btn primary', onclick: buy }, 'Comprar agora')));
   document.body.append(ov);
 }
 
