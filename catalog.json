@@ -1,0 +1,15 @@
+{
+  "products": [
+    {
+      "title": "TJSP · Escrevente Técnico Judiciário 2027",
+      "subtitle": "Baralho completo para revisão espaçada",
+      "desc": "Sistema completo de revisão estratégica no Anki com revisão espaçada inteligente que prioriza seus pontos fracos, ideal para quem tem rotina limitada.\n\n• Formatos variados: frente e verso, múltipla escolha, certo ou errado e omissão de palavras (cloze) para memorizar a lei seca.\n• Conteúdo enriquecido: explicações objetivas, legislação na íntegra, macetes de prova e alertas de pegadinhas da banca.\n\nFeito para garantir consolidação e alta performance rumo à aprovação.",
+      "cards": 16600,
+      "price": "R$ 112,90",
+      "emoji": "⚖️",
+      "color": "#2563eb",
+      "checkout": "https://pay.kiwify.com.br/e6tqU0H"
+      "sample": "amostras/tjsp-escrevente-2027.apkg"
+    }
+  ]
+}
