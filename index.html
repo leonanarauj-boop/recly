@@ -125,6 +125,42 @@ h1{font-size:28px;margin:6px 0}h3{margin:4px 0 10px}h4{margin:16px 0 4px;color:v
 .sheet .input{margin:0 0 8px}.sheet .btn.wide{margin-top:8px}
 .steps{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
 .srow2 .btn{flex:1 1 auto}
+/* ---- Loja v2: vitrine + página de produto ---- */
+.shophead{font-size:15px;color:var(--mut);margin:2px 0 12px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.pcard{display:flex;flex-direction:column;text-align:left;background:var(--card);border:0;border-radius:16px;overflow:hidden;padding:0;color:var(--fg);box-shadow:0 1px 8px rgba(0,0,0,.07);font:inherit}
+.pcard:active{transform:scale(.98)}
+.pcov,.phero{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcov{aspect-ratio:4/3}.phero{aspect-ratio:16/10}
+.pcov img,.phero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pemoji{font-size:38px}.phero .pemoji{font-size:84px}
+.pbadge{position:absolute;top:8px;left:8px;background:#fff;color:#111;font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em;z-index:1}
+.pinfo{padding:10px 11px 12px;display:flex;flex-direction:column;gap:3px;flex:1}
+.ptitle{font-weight:700;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.psub{font-size:12px;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pprice{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;margin-top:4px}.pprice b{font-size:17px;font-weight:800}
+.pprice s,.ph-price s,.pfoot s{color:var(--mut);font-size:12px}.pprice i,.ph-price i{font-style:normal;background:#dcfce7;color:#15803d;font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px}
+.psample{margin-top:auto;padding-top:6px;font-size:11.5px;font-weight:600;color:#16a34a}
+.ppage{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;animation:pin .22s ease-out}
+.ppage.out{animation:pout .22s ease-in forwards}
+@keyframes pin{from{transform:translateX(100%)}to{transform:none}}@keyframes pout{to{transform:translateX(100%)}}
+.pbar{display:flex;align-items:center;gap:8px;padding:calc(var(--sat) + 12px) 12px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+.pbar span{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pback{border:0;background:none;color:var(--pri);font-size:17px;padding:6px 4px;white-space:nowrap}
+.pscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pmain{padding:16px 16px 24px;max-width:720px;margin:0 auto}
+.ph-title{font-size:23px;line-height:1.2;margin:0 0 6px}.ph-sub{color:var(--mut);margin:0 0 10px}
+.ph-price{display:flex;align-items:baseline;gap:8px}.ph-price b{font-size:30px;font-weight:800}.ph-price s{font-size:16px}
+.pfacts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}
+.pfacts div{background:var(--card);border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:1px}
+.pfacts span{font-size:20px}.pfacts b{font-size:13px}.pfacts small{font-size:11px;color:var(--mut)}
+.pbtns{display:flex;flex-direction:column;gap:10px}.psamplebtn{background:#dcfce7;color:#15803d;font-weight:700}
+.psec{background:var(--card);border-radius:14px;padding:14px 16px;margin-top:14px}.psec h3{margin:0 0 8px;font-size:17px}.psec p{margin:6px 0;line-height:1.5;font-size:15px}
+.plist{list-style:none;margin:0;padding:0}.plist li{display:flex;gap:10px;padding:7px 0;font-size:15px;line-height:1.4;border-bottom:1px solid var(--line)}.plist li:last-child{border:0}
+.pfaq{border-bottom:1px solid var(--line);padding:9px 0}.pfaq:last-child{border:0}.pfaq summary{font-weight:600;font-size:15px}.pfaq p{color:var(--mut)}
+.pfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(var(--sab) + 10px);background:var(--card);border-top:1px solid var(--line)}
+.pfoot div{display:flex;flex-direction:column}.pfoot b{font-size:20px;font-weight:800}.pfoot .btn{flex:1;max-width:220px}
+@media(prefers-color-scheme:dark){.pprice i,.ph-price i,.psamplebtn{background:#14532d;color:#bbf7d0}}
 
 </style>
 </head>

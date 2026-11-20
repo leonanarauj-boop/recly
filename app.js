@@ -2072,7 +2072,25 @@ function shareCard(s, goal, startKind) {
       h('button', { class: 'btn', onclick: () => m.close() }, 'Fechar'))], { full: true });
 }
 
-// Aba "Loja": catálogo de baralhos com link de compra.
+// Aba "Loja": vitrine em 2 colunas + página de produto em tela cheia.
+const money = s => String(s || '').trim();
+function shopCover(it, cls) {
+  const c1 = it.color || '#2563eb';
+  const box = h('div', { class: cls, style: `background:linear-gradient(135deg,${c1},${c1}99)` }, h('span', { class: 'pemoji' }, it.emoji || '📘'));
+  if (it.image) {
+    const img = h('img', { src: it.image, alt: '', loading: 'lazy' });
+    img.onerror = () => img.remove();
+    box.append(img);
+  }
+  if (it.badge) box.append(h('b', { class: 'pbadge' }, it.badge));
+  return box;
+}
+function discountOf(it) {
+  const n = s => parseFloat(String(s || '').replace(/[^\d,]/g, '').replace(',', '.'));
+  const a = n(it.oldPrice), b = n(it.price);
+  return a > b && b > 0 ? Math.round((1 - b / a) * 100) : 0;
+}
+
 async function viewShop(v) {
   v.append(h('header', { class: 'top' }, h('h1', null, 'Loja'), h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: doImport }, '⬇ Importar'))));
   const box = h('div', null, h('div', { class: 'spinner' })); v.append(box);
@@ -2084,22 +2102,56 @@ async function viewShop(v) {
   if (!items.length) {
     box.append(h('div', { class: 'welcome' }, h('div', { class: 'wl-ic' }, '🛍️'), h('h2', null, cat ? 'Novos baralhos em breve' : 'Loja indisponível'),
       h('p', { class: 'muted' }, cat ? 'Volte aqui para conferir as novidades.' : 'Conecte-se à internet para carregar a loja.')));
+    return;
   }
-  for (const it of items) {
-    const c1 = it.color || '#2563eb';
-    box.append(h('div', { class: 'scard' },
-      h('div', { class: 'scov', style: `background:linear-gradient(135deg,${c1},${c1}aa)` }, h('span', null, it.emoji || '📘')),
-      h('div', { class: 'sbody' },
-        h('div', { class: 'stitle' }, it.title), it.subtitle ? h('div', { class: 'ssub' }, it.subtitle) : null,
-        it.desc ? h('p', { class: 'sdesc' }, it.desc) : null,
-        h('div', { class: 'smeta' }, it.cards ? h('span', null, `🃏 ${Number(it.cards).toLocaleString('pt-BR')} cartões`) : null),
-        h('div', { class: 'srow2' }, it.price ? h('div', { class: 'sprice' }, it.price) : null,
-          h('button', { class: 'btn primary', onclick: () => it.checkout ? window.open(it.checkout, '_blank', 'noopener') : alertBox('Link de compra indisponível.') }, 'Comprar'),
-          it.sample ? h('button', { class: 'btn', onclick: () => importSample(it) }, '🎁 Importar amostra grátis') : null))));
-  }
-  if (items.length) box.append(h('div', { class: 'card2' }, h('h3', null, 'Como funciona'),
-    h('ol', { class: 'steps' }, h('li', null, 'Quer conhecer antes? Toque em “Importar amostra grátis”.'), h('li', null, 'Toque em “Comprar” e finalize o pagamento.'), h('li', null, 'Baixe o arquivo do baralho (.apkg) enviado após a compra e salve em Arquivos.'),
-      h('li', null, 'Volte ao Recly e toque em “Importar”. Pronto: estude offline.'))));
+  if (cat.headline) box.append(h('p', { class: 'shophead' }, cat.headline));
+  box.append(h('div', { class: 'pgrid' }, items.map(it => {
+    const off = discountOf(it);
+    return h('button', { class: 'pcard', onclick: () => productPage(it) },
+      shopCover(it, 'pcov'),
+      h('div', { class: 'pinfo' },
+        h('div', { class: 'ptitle' }, it.title),
+        it.subtitle ? h('div', { class: 'psub' }, it.subtitle) : null,
+        h('div', { class: 'pprice' }, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price)), off ? h('i', null, `-${off}%`) : null),
+        it.sample ? h('div', { class: 'psample' }, '🎁 Baixe a amostra grátis') : null));
+  })));
+  box.append(h('p', { class: 'muted center s' }, 'Toque em um baralho para ver todos os detalhes.'));
+}
+
+function productPage(it) {
+  const off = discountOf(it);
+  const buy = () => it.checkout ? window.open(it.checkout, '_blank', 'noopener') : alertBox('Link de compra indisponível.');
+  const facts = [it.cards ? ['🃏', Number(it.cards).toLocaleString('pt-BR'), 'cartões'] : null,
+    it.subjects ? ['📚', String(it.subjects), 'matérias'] : null, ['📶', 'Offline', 'sem internet'], ['🔁', 'Revisão', 'espaçada']].filter(Boolean).slice(0, 4);
+  const list = (title, arr, ic) => arr && arr.length ? h('section', { class: 'psec' }, h('h3', null, title), h('ul', { class: 'plist' }, arr.map(x => h('li', null, h('span', null, ic), h('div', null, x))))) : null;
+  const ov = h('div', { class: 'ppage' });
+  const close = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 220); };
+  ov.append(
+    h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: close }, '‹ Loja'), h('span', null, it.title)),
+    h('div', { class: 'pscroll' },
+      shopCover(it, 'phero'),
+      h('div', { class: 'pmain' },
+        h('h2', { class: 'ph-title' }, it.title),
+        it.subtitle ? h('p', { class: 'ph-sub' }, it.subtitle) : null,
+        h('div', { class: 'ph-price' }, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price)), off ? h('i', null, `-${off}%`) : null),
+        it.installments ? h('div', { class: 'muted' }, it.installments) : null,
+        h('div', { class: 'pfacts' }, facts.map(([ic, a, b]) => h('div', null, h('span', null, ic), h('b', null, a), h('small', null, b)))),
+        h('div', { class: 'pbtns' },
+          h('button', { class: 'btn primary big wide', onclick: buy }, '🛒 Comprar agora'),
+          it.sample ? h('button', { class: 'btn big wide psamplebtn', onclick: () => importSample(it) }, '🎁 Baixar amostra grátis') : null),
+        it.desc ? h('section', { class: 'psec' }, h('h3', null, 'Sobre o baralho'), String(it.desc).split(/\n+/).map(p => h('p', null, p))) : null,
+        list('Vantagens', it.benefits, '✅'),
+        list('O que você recebe', it.includes, '📦'),
+        h('section', { class: 'psec' }, h('h3', null, 'Como funciona'),
+          h('ol', { class: 'steps' }, it.sample ? h('li', null, 'Quer conhecer antes? Baixe a amostra grátis e estude alguns cartões.') : null,
+            h('li', null, 'Toque em “Comprar agora” e finalize o pagamento (Pix ou cartão).'),
+            h('li', null, 'Baixe o arquivo do baralho (.apkg) enviado após a compra e salve em Arquivos.'),
+            h('li', null, 'No Recly, toque em “Importar” e escolha o arquivo. Pronto: estude offline.'))),
+        it.faq && it.faq.length ? h('section', { class: 'psec' }, h('h3', null, 'Perguntas frequentes'),
+          it.faq.map(f => h('details', { class: 'pfaq' }, h('summary', null, f.q), h('p', null, f.a)))) : null)),
+    h('div', { class: 'pfoot' }, h('div', null, it.oldPrice ? h('s', null, money(it.oldPrice)) : null, h('b', null, money(it.price))),
+      h('button', { class: 'btn primary', onclick: buy }, 'Comprar')));
+  document.body.append(ov);
 }
 
 async function importSample(it) {
@@ -2109,7 +2161,8 @@ async function importSample(it) {
     if (!r.ok) throw new Error('A amostra ainda não está disponível. Tente mais tarde.');
     const file = new File([await r.blob()], 'amostra-' + (it.title || 'baralho').replace(/[^\w]+/g, '-').slice(0, 40) + '.apkg', { type: 'application/octet-stream' });
     const res = await Apkg.importFile(file, t => b.set(t)); b.close();
-    await alertBox(`🎁 Amostra importada!\n${res.notes} notas, ${res.cards} cartões` + (res.skipped ? ` (${res.skipped} já existiam)` : '') + '\n\nEstude à vontade. Gostou? Volte aqui e toque em “Comprar” para ter o baralho completo.', 'Amostra grátis'); go('decks');
+    await alertBox(`🎁 Amostra importada!\n${res.notes} notas, ${res.cards} cartões` + (res.skipped ? ` (${res.skipped} já existiam)` : '') + '\n\nEstude à vontade. Gostou? Volte à Loja e toque em “Comprar” para ter o baralho completo.', 'Amostra grátis');
+    document.querySelectorAll('.ppage').forEach(p => p.remove()); go('decks');
   } catch (e) { console.error(e); b.close(); alertBox(e.message, 'Amostra'); }
 }
 

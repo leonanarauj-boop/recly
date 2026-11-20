@@ -1,26 +1,36 @@
 {
+  "headline": "Baralhos prontos para sua aprovação. Estude offline, no seu ritmo.",
   "products": [
     {
       "title": "TJSP · Escrevente Técnico Judiciário 2027",
       "subtitle": "Baralho completo para revisão espaçada",
-      "desc": "Sistema completo de revisão estratégica no Anki com revisão espaçada inteligente que prioriza seus pontos fracos, ideal para quem tem rotina limitada.\n\n• Formatos variados: frente e verso, múltipla escolha, certo ou errado e omissão de palavras (cloze) para memorizar a lei seca.\n• Conteúdo enriquecido: explicações objetivas, legislação na íntegra, macetes de prova e alertas de pegadinhas da banca.\n\nFeito para garantir consolidação e alta performance rumo à aprovação.",
-      "cards": 16600,
+      "badge": "Mais vendido",
       "price": "R$ 112,90",
+      "oldPrice": "",
+      "installments": "",
+      "image": "",
       "emoji": "⚖️",
       "color": "#2563eb",
+      "cards": 11000,
+      "subjects": "",
       "checkout": "https://pay.kiwify.com.br/e6tqU0H",
-      "sample": "amostras/tjsp-escrevente-2027.apkg"
-    },
-{
-      "title": "TJSP · Oficial de Justiça 2027",
-      "subtitle": "Baralho completo para revisão espaçada",
-      "desc": "Todas as 11 matérias do edital do TJSP para Oficial de Justiça na ordem do edital. Baralho Anki (.apkg) com questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização.",
-      "price": "R$ 97,90",
-      "emoji": "⚖️",
-      "color": "#2563eb",
-      "checkout": "https://chk.eduzz.com/Q9N28AVK01?a=60563966",
-      "sample": "amostras/tjsp-oficial-2027.apkg"
+      "sample": "amostras/tjsp-escrevente-2027.apkg",
+      "desc": "Mais de 11 mil cartões organizados por matéria e assunto, prontos para estudar offline no seu iPhone.\nO Recly mostra cada cartão na hora certa com revisão espaçada, para você memorizar mais estudando menos.",
+      "benefits": [
+        "Estude em qualquer lugar, mesmo sem internet",
+        "Revisão espaçada: cada cartão aparece na hora certa",
+        "Organizado por matéria e assunto",
+        "Estatísticas de progresso e sequência de dias",
+        "Compra única, sem mensalidade"
+      ],
+      "includes": [
+        "Arquivo .apkg com o baralho completo",
+        "Compatível também com o Anki do computador"
+      ],
+      "faq": [
+        { "q": "Preciso de internet para estudar?", "a": "Não. Depois de importar o baralho, tudo funciona offline." },
+        { "q": "Como recebo o baralho?", "a": "Após o pagamento, você recebe o arquivo .apkg. É só salvar em Arquivos e tocar em Importar no Recly." }
+      ]
     }
-
   ]
 }
