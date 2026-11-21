@@ -1,0 +1,10 @@
+# Recly
+
+> App gratuito de flashcards com revisão espaçada para concursos públicos (TJSP, INSS, Soldado PM SP), no celular, offline e compatível com Anki (.apkg). Baralhos prontos vendidos na Loja do app, com amostra grátis.
+
+- [Início](https://recly.com.br/)
+- [Flashcards para o concurso do TJSP](https://recly.com.br/concursos/tjsp/)
+- [Flashcards para o concurso do INSS](https://recly.com.br/concursos/inss/)
+- [Flashcards para o concurso de Soldado da PM SP](https://recly.com.br/concursos/pmsp/)
+- [Revisão espaçada para concursos: como estudar com flashcards](https://recly.com.br/guia/revisao-espacada-para-concursos/)
+- [Abrir o app](https://recly.com.br/app/)
