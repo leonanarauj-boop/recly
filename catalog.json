@@ -1,4 +1,7 @@
 {
+  "turmasApi": "https://recly-turmas.leonanarauj.workers.dev",
+  "groupCheckout": "",
+  "groupPrice": "",
   "headline": "Baralhos prontos para sua aprovação. Estude offline, no seu ritmo.",
   "products": [
     {
@@ -39,258 +42,243 @@
           "q": "Como recebo o baralho?",
           "a": "Após o pagamento, você recebe o arquivo .apkg. É só salvar em Arquivos e tocar em Importar no Recly."
         }
-      ]
-    },
-
-
-
-
-{
-  "title": "TJSP · Oficial de Justiça",
-  "subtitle": "Estude o edital completo com flashcards no Anki",
-  "category": "Concursos · TJSP",
-  "coverTitle": "Oficial de Justiça TJSP",
-  "badge": "",
-  "price": "R$ 97,90",
-  "oldPrice": "119,90",
-  "installments": "em até 12 vezes",
-  "image": "https://cdn.eduzzcdn.com/myeduzz/upload/dd/2a/dd2accd9e1014d238d76d6e941346942",
-  "color": "#2563eb",
-  "cards": null,
-  "subjects": "Atualizado edital 2027",
-  "checkout": "https://chk.eduzz.com/Q9N28AVK01?a=60563966",
-  "sample": "amostras/tjsp-oficial-2027.apkg",
-  "desc": "Prepare-se para o concurso de Oficial de Justiça do TJSP estudando o conteúdo do edital por meio de flashcards no Anki. O baralho reúne questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização. Com conteúdo organizado por matérias e assuntos, você consegue revisar os temas de maneira ativa, identificar pontos que precisam de mais atenção e reforçar a fixação do conhecimento por meio de revisões espaçadas. Estude pelo computador ou celular e leve sua preparação para qualquer lugar.",
-  "benefits": [
-    "Estude o conteúdo do edital completo por meio de flashcards",
-    "Questões de certo ou errado para testar seus conhecimentos",
-    "Explicações e fundamentação legal para compreender cada assunto",
-    "Exemplos práticos e pegadinhas para aprofundar o aprendizado",
-    "Dicas de memorização para facilitar a fixação dos conteúdos",
-    "Revisões espaçadas com o sistema de repetição do Anki",
-    "Estude pelo computador ou celular, no seu próprio ritmo"
-  ],
-  "topics": [
-    "Questões de certo ou errado",
-    "Explicações dos conteúdos",
-    "Fundamentação legal",
-    "Exemplos práticos",
-    "Pegadinhas de prova",
-    "Dicas de memorização",
-    "Conteúdo organizado por matérias e assuntos do edital"
-  ],
-  "includes": [
-    "Baralho digital do Anki em formato .apkg",
-    "Flashcards organizados por matérias e assuntos",
-    "Acesso ao material por e-mail e pela área de membros da Eduzz",
-    "Possibilidade de importar o baralho no Anki para computador ou celular"
-  ],
-  "guarantee": "",
-  "faq": [
-    {
-      "q": "O que é o baralho Anki?",
-      "a": "É um conjunto de flashcards digitais para estudar os conteúdos do edital por meio de perguntas, respostas e revisões espaçadas."
+      ],
+      "page": "tjsp"
     },
     {
-      "q": "O que encontro nos flashcards?",
-      "a": "Questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização."
+      "title": "TJSP · Oficial de Justiça",
+      "subtitle": "Estude o edital completo com flashcards no Anki",
+      "category": "Concursos · TJSP",
+      "coverTitle": "Oficial de Justiça TJSP",
+      "badge": "",
+      "price": "R$ 97,90",
+      "oldPrice": "119,90",
+      "installments": "em até 12 vezes",
+      "image": "https://cdn.eduzzcdn.com/myeduzz/upload/dd/2a/dd2accd9e1014d238d76d6e941346942",
+      "color": "#2563eb",
+      "cards": null,
+      "subjects": "Atualizado edital 2027",
+      "checkout": "https://chk.eduzz.com/Q9N28AVK01?a=60563966",
+      "sample": "amostras/tjsp-oficial-2027.apkg",
+      "desc": "Prepare-se para o concurso de Oficial de Justiça do TJSP estudando o conteúdo do edital por meio de flashcards no Anki. O baralho reúne questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização. Com conteúdo organizado por matérias e assuntos, você consegue revisar os temas de maneira ativa, identificar pontos que precisam de mais atenção e reforçar a fixação do conhecimento por meio de revisões espaçadas. Estude pelo computador ou celular e leve sua preparação para qualquer lugar.",
+      "benefits": [
+        "Estude o conteúdo do edital completo por meio de flashcards",
+        "Questões de certo ou errado para testar seus conhecimentos",
+        "Explicações e fundamentação legal para compreender cada assunto",
+        "Exemplos práticos e pegadinhas para aprofundar o aprendizado",
+        "Dicas de memorização para facilitar a fixação dos conteúdos",
+        "Revisões espaçadas com o sistema de repetição do Anki",
+        "Estude pelo computador ou celular, no seu próprio ritmo"
+      ],
+      "topics": [
+        "Questões de certo ou errado",
+        "Explicações dos conteúdos",
+        "Fundamentação legal",
+        "Exemplos práticos",
+        "Pegadinhas de prova",
+        "Dicas de memorização",
+        "Conteúdo organizado por matérias e assuntos do edital"
+      ],
+      "includes": [
+        "Baralho digital do Anki em formato .apkg",
+        "Flashcards organizados por matérias e assuntos",
+        "Acesso ao material por e-mail e pela área de membros da Eduzz",
+        "Possibilidade de importar o baralho no Anki para computador ou celular"
+      ],
+      "guarantee": "",
+      "faq": [
+        {
+          "q": "O que é o baralho Anki?",
+          "a": "É um conjunto de flashcards digitais para estudar os conteúdos do edital por meio de perguntas, respostas e revisões espaçadas."
+        },
+        {
+          "q": "O que encontro nos flashcards?",
+          "a": "Questões de certo ou errado, explicações, fundamentação legal, exemplos práticos, pegadinhas de prova e dicas de memorização."
+        },
+        {
+          "q": "Preciso de internet para estudar?",
+          "a": "O material é baixado e importado no Anki. Depois da configuração e sincronização inicial, o estudo pode ser realizado offline."
+        },
+        {
+          "q": "Como recebo o material?",
+          "a": "Após a confirmação do pagamento, o acesso é enviado por e-mail e disponibilizado na área de membros da Eduzz."
+        },
+        {
+          "q": "Posso estudar pelo celular e computador?",
+          "a": "Sim. O arquivo .apkg pode ser importado no Anki para computador e utilizado em dispositivos móveis compatíveis."
+        },
+        {
+          "q": "Posso testar antes de comprar?",
+          "a": "Sim. Existe uma amostra gratuita para conhecer a metodologia do Destruindo Flashcards antes de adquirir o material."
+        }
+      ],
+      "page": "tjsp"
     },
     {
-      "q": "Preciso de internet para estudar?",
-      "a": "O material é baixado e importado no Anki. Depois da configuração e sincronização inicial, o estudo pode ser realizado offline."
+      "title": "INSS · Baralho Anki",
+      "subtitle": "8.125 flashcards para sua preparação",
+      "category": "Concursos · INSS",
+      "coverTitle": "INSS 8.125 Cards",
+      "badge": null,
+      "price": "R$ 89,90",
+      "oldPrice": "119,90",
+      "installments": "em até 12 vezes",
+      "image": "https://cdn.eduzzcdn.com/myeduzz/upload/fc/6f/fc6ffddbd191443aa0e3690003e5aed2",
+      "color": "#2563eb",
+      "cards": 8125,
+      "subjects": "Conhecimentos Básicos e Específicos",
+      "checkout": "https://chk.eduzz.com/8017A87Q07?a=60563966",
+      "sample": "amostras/inss-2027.apkg",
+      "desc": "Potencialize sua preparação para o concurso do INSS com um baralho completo de 8.125 flashcards, organizado com foco no conteúdo do último edital. São sete disciplinas reunidas em um único material digital, com cartões separados por matérias e subpastas para facilitar a organização dos estudos. Utilize o sistema de repetição espaçada do Anki para revisar os conteúdos, reforçar a memorização e acompanhar sua evolução. O arquivo .apkg está pronto para importação, permitindo começar a estudar sem precisar criar seus próprios cartões. Mais organização, praticidade e conteúdo para fortalecer sua preparação.",
+      "benefits": [
+        "8.125 flashcards organizados em um único material",
+        "Sete disciplinas contempladas no último edital",
+        "Conteúdo dividido por matérias e subpastas",
+        "Repetição espaçada para reforçar a memorização",
+        "Arquivo .apkg pronto para importação no Anki",
+        "Estude pelo computador ou celular",
+        "Material digital para revisar no seu próprio ritmo"
+      ],
+      "topics": [
+        "Conhecimentos Específicos — 2.406 cards",
+        "Português — 2.407 cards",
+        "Informática — 2.011 cards",
+        "Direito Administrativo — 563 cards",
+        "Direito Constitucional — 339 cards",
+        "Raciocínio Lógico — 317 cards",
+        "Ética no Serviço Público — 82 cards"
+      ],
+      "includes": [
+        "Baralho digital completo com 8.125 flashcards",
+        "Arquivo .apkg pronto para importação no Anki",
+        "Sete disciplinas organizadas por matérias e subpastas"
+      ],
+      "guarantee": "",
+      "faq": [
+        {
+          "q": "Quantos flashcards estão incluídos?",
+          "a": "O material contém 8.125 flashcards distribuídos entre sete disciplinas do concurso do INSS."
+        },
+        {
+          "q": "Quais matérias estão contempladas?",
+          "a": "Conhecimentos Específicos, Português, Informática, Direito Administrativo, Direito Constitucional, Raciocínio Lógico e Ética no Serviço Público."
+        },
+        {
+          "q": "Como recebo o material?",
+          "a": "Após a confirmação do pagamento, você recebe acesso ao arquivo digital para baixar e importar no Anki."
+        },
+        {
+          "q": "Como faço para utilizar os flashcards?",
+          "a": "Baixe o arquivo .apkg e importe-o no Anki. Os cartões estarão organizados para você começar suas revisões."
+        },
+        {
+          "q": "Preciso criar os cartões manualmente?",
+          "a": "Não. O baralho já está pronto e configurado para importação, sem necessidade de criar os flashcards individualmente."
+        },
+        {
+          "q": "Posso estudar pelo celular?",
+          "a": "Sim. O Anki possui versões para computador e dispositivos móveis compatíveis."
+        },
+        {
+          "q": "Como funciona a repetição espaçada?",
+          "a": "O Anki programa as revisões dos cartões conforme seu desempenho, ajudando a reforçar os conteúdos e evitar o esquecimento."
+        }
+      ],
+      "page": "inss"
     },
     {
-      "q": "Como recebo o material?",
-      "a": "Após a confirmação do pagamento, o acesso é enviado por e-mail e disponibilizado na área de membros da Eduzz."
-    },
-    {
-      "q": "Posso estudar pelo celular e computador?",
-      "a": "Sim. O arquivo .apkg pode ser importado no Anki para computador e utilizado em dispositivos móveis compatíveis."
-    },
-    {
-      "q": "Posso testar antes de comprar?",
-      "a": "Sim. Existe uma amostra gratuita para conhecer a metodologia do Destruindo Flashcards antes de adquirir o material."
+      "title": "PM-SP · Soldado 2º Classe",
+      "subtitle": "10.759 flashcards + 220 apostilas em PDF",
+      "category": "Concursos · Polícia Militar",
+      "coverTitle": "PM-SP Aluno-Soldado",
+      "badge": "Material completo",
+      "price": "R$ 97,97",
+      "oldPrice": "",
+      "installments": "em até 12 vezes",
+      "image": "https://cdn.eduzzcdn.com/myeduzz/upload/4a/72/4a72c964426044dd909a7ef18aeb800c",
+      "color": "#2563eb",
+      "cards": 10759,
+      "subjects": "Matérias do edital DP-4/321/26, organizadas em 61 assuntos",
+      "checkout": "https://chk.eduzz.com/1W3ZNNVQW2?a=60563966",
+      "sample": "",
+      "desc": "Prepare-se para o concurso de Aluno-Soldado PM do Quadro de Praças (QP) da Polícia Militar de São Paulo com um pacote completo de estudos e revisão. São 10.759 flashcards de Certo ou Errado, cards de oclusão da lei e 220 apostilas esquematizadas em PDF, organizados em 61 assuntos e seguindo a ordem do edital DP-4/321/26. Os flashcards apresentam gabarito comentado, fundamentação legal literal, exemplos práticos e pegadinhas de prova. Já as apostilas complementam o aprendizado com quadros comparativos e listas de fácil memorização. Estude assunto por assunto, utilize a revisão espaçada do Anki e tenha todo o material organizado sem precisar perder tempo montando seus próprios recursos. Arquivo pronto para importação, compatível com Anki no computador e celular. Compra única, sem mensalidade ou renovação.",
+      "benefits": [
+        "10.759 flashcards de Certo ou Errado com gabarito comentado",
+        "220 apostilas esquematizadas em PDF para complementar os estudos",
+        "61 assuntos organizados na ordem do edital",
+        "Cards de oclusão da lei para memorizar números, prazos e expressões literais",
+        "Fundamentação legal, exemplos práticos e pegadinhas de prova",
+        "Revisão espaçada nativa do Anki para reforçar a memorização",
+        "Conteúdo organizado por matérias e subbaralhos",
+        "Compatível com Anki no computador, Android e iPhone",
+        "Atualizações do material conforme as condições informadas na oferta",
+        "Compra única, sem mensalidade ou renovação"
+      ],
+      "topics": [
+        "10.759 flashcards de Certo ou Errado",
+        "Cards de oclusão da legislação",
+        "61 assuntos do edital DP-4/321/26",
+        "Gabaritos comentados e fundamentação legal literal",
+        "Exemplos práticos e pegadinhas de prova",
+        "220 apostilas esquematizadas em PDF",
+        "Quadros comparativos e listas de memorização"
+      ],
+      "includes": [
+        "Baralho digital Anki com 10.759 flashcards",
+        "Cards de oclusão da lei",
+        "220 apostilas esquematizadas em PDF",
+        "61 assuntos organizados em subbaralhos na ordem do edital",
+        "Material pronto para importação no Anki",
+        "Passo a passo para utilização do material"
+      ],
+      "guarantee": "7 dias de garantia incondicional pela Eduzz.",
+      "faq": [
+        {
+          "q": "O que está incluído no material?",
+          "a": "São 10.759 flashcards, cards de oclusão da lei e 220 apostilas esquematizadas em PDF, organizados em 61 assuntos."
+        },
+        {
+          "q": "Como são os flashcards?",
+          "a": "São questões de Certo ou Errado com gabarito comentado, fundamentação legal literal, exemplos práticos e pegadinhas de prova."
+        },
+        {
+          "q": "O que são os cards de oclusão da lei?",
+          "a": "São cartões voltados à memorização de números, prazos e expressões exatas dos dispositivos legais."
+        },
+        {
+          "q": "Como estão organizados os conteúdos?",
+          "a": "Os 61 assuntos seguem a ordem do edital DP-4/321/26, cada um separado em seu próprio subbaralho."
+        },
+        {
+          "q": "Preciso saber utilizar o Anki?",
+          "a": "Não. O material já vem pronto para importação e acompanha um passo a passo para orientar sua utilização."
+        },
+        {
+          "q": "Funciona no iPhone?",
+          "a": "Sim. O arquivo pode ser utilizado no Anki para iPhone. O site conta com um sistema offline onde você importa e utiliza diretamente os cards de revisão."
+        },
+        {
+          "q": "Recebo atualizações do material?",
+          "a": "Se o edital ou a legislação mudar, o baralho será atualizado e você poderá baixar a nova versão pelo link da sua compra."
+        },
+        {
+          "q": "Posso imprimir ou compartilhar o material?",
+          "a": "O material é destinado ao uso pessoal. Não é permitido revendê-lo ou compartilhá-lo com terceiros."
+        },
+        {
+          "q": "Como funciona a entrega?",
+          "a": "Após a compra, você recebe o link de download para acessar o material e começar a estudar."
+        },
+        {
+          "q": "O produto possui garantia?",
+          "a": "Sim. Você conta com 7 dias de garantia incondicional pela Eduzz."
+        },
+        {
+          "q": "Preciso pagar mensalidade?",
+          "a": "Não. É uma compra única, sem mensalidade ou renovação."
+        }
+      ],
+      "page": "pmsp"
     }
-  ]
-},
-
-
-    
-    
-{
-  "title": "INSS · Baralho Anki",
-  "subtitle": "8.125 flashcards para sua preparação",
-  "category": "Concursos · INSS",
-  "coverTitle": "INSS 8.125 Cards",
-  "badge": null,
-  "price": "R$ 89,90",
-  "oldPrice": "119,90",
-  "installments": "em até 12 vezes",
-  "image": "https://cdn.eduzzcdn.com/myeduzz/upload/fc/6f/fc6ffddbd191443aa0e3690003e5aed2",
-  "color": "#2563eb",
-  "cards": 8125,
-  "subjects": "Conhecimentos Básicos e Específicos",
-  "checkout": "https://chk.eduzz.com/8017A87Q07?a=60563966",
-  "sample": "amostras/inss-2027.apkg",
-  "desc": "Potencialize sua preparação para o concurso do INSS com um baralho completo de 8.125 flashcards, organizado com foco no conteúdo do último edital. São sete disciplinas reunidas em um único material digital, com cartões separados por matérias e subpastas para facilitar a organização dos estudos. Utilize o sistema de repetição espaçada do Anki para revisar os conteúdos, reforçar a memorização e acompanhar sua evolução. O arquivo .apkg está pronto para importação, permitindo começar a estudar sem precisar criar seus próprios cartões. Mais organização, praticidade e conteúdo para fortalecer sua preparação.",
-  "benefits": [
-    "8.125 flashcards organizados em um único material",
-    "Sete disciplinas contempladas no último edital",
-    "Conteúdo dividido por matérias e subpastas",
-    "Repetição espaçada para reforçar a memorização",
-    "Arquivo .apkg pronto para importação no Anki",
-    "Estude pelo computador ou celular",
-    "Material digital para revisar no seu próprio ritmo"
-  ],
-  "topics": [
-    "Conhecimentos Específicos — 2.406 cards",
-    "Português — 2.407 cards",
-    "Informática — 2.011 cards",
-    "Direito Administrativo — 563 cards",
-    "Direito Constitucional — 339 cards",
-    "Raciocínio Lógico — 317 cards",
-    "Ética no Serviço Público — 82 cards"
-  ],
-  "includes": [
-    "Baralho digital completo com 8.125 flashcards",
-    "Arquivo .apkg pronto para importação no Anki",
-    "Sete disciplinas organizadas por matérias e subpastas"
-  ],
-  "guarantee": "",
-  "faq": [
-    {
-      "q": "Quantos flashcards estão incluídos?",
-      "a": "O material contém 8.125 flashcards distribuídos entre sete disciplinas do concurso do INSS."
-    },
-    {
-      "q": "Quais matérias estão contempladas?",
-      "a": "Conhecimentos Específicos, Português, Informática, Direito Administrativo, Direito Constitucional, Raciocínio Lógico e Ética no Serviço Público."
-    },
-    {
-      "q": "Como recebo o material?",
-      "a": "Após a confirmação do pagamento, você recebe acesso ao arquivo digital para baixar e importar no Anki."
-    },
-    {
-      "q": "Como faço para utilizar os flashcards?",
-      "a": "Baixe o arquivo .apkg e importe-o no Anki. Os cartões estarão organizados para você começar suas revisões."
-    },
-    {
-      "q": "Preciso criar os cartões manualmente?",
-      "a": "Não. O baralho já está pronto e configurado para importação, sem necessidade de criar os flashcards individualmente."
-    },
-    {
-      "q": "Posso estudar pelo celular?",
-      "a": "Sim. O Anki possui versões para computador e dispositivos móveis compatíveis."
-    },
-    {
-      "q": "Como funciona a repetição espaçada?",
-      "a": "O Anki programa as revisões dos cartões conforme seu desempenho, ajudando a reforçar os conteúdos e evitar o esquecimento."
-    }
-  ]
-},
-
-
-    
-    
-{
-  "title": "PM-SP · Soldado 2º Classe",
-  "subtitle": "10.759 flashcards + 220 apostilas em PDF",
-  "category": "Concursos · Polícia Militar",
-  "coverTitle": "PM-SP Aluno-Soldado",
-  "badge": "Material completo",
-  "price": "R$ 97,97",
-  "oldPrice": "",
-  "installments": "em até 12 vezes",
-  "image": "https://cdn.eduzzcdn.com/myeduzz/upload/4a/72/4a72c964426044dd909a7ef18aeb800c",
-  "color": "#2563eb",
-  "cards": 10759,
-  "subjects": "Matérias do edital DP-4/321/26, organizadas em 61 assuntos",
-  "checkout": "https://chk.eduzz.com/1W3ZNNVQW2?a=60563966",
-  "sample": "",
-  "desc": "Prepare-se para o concurso de Aluno-Soldado PM do Quadro de Praças (QP) da Polícia Militar de São Paulo com um pacote completo de estudos e revisão. São 10.759 flashcards de Certo ou Errado, cards de oclusão da lei e 220 apostilas esquematizadas em PDF, organizados em 61 assuntos e seguindo a ordem do edital DP-4/321/26. Os flashcards apresentam gabarito comentado, fundamentação legal literal, exemplos práticos e pegadinhas de prova. Já as apostilas complementam o aprendizado com quadros comparativos e listas de fácil memorização. Estude assunto por assunto, utilize a revisão espaçada do Anki e tenha todo o material organizado sem precisar perder tempo montando seus próprios recursos. Arquivo pronto para importação, compatível com Anki no computador e celular. Compra única, sem mensalidade ou renovação.",
-  "benefits": [
-    "10.759 flashcards de Certo ou Errado com gabarito comentado",
-    "220 apostilas esquematizadas em PDF para complementar os estudos",
-    "61 assuntos organizados na ordem do edital",
-    "Cards de oclusão da lei para memorizar números, prazos e expressões literais",
-    "Fundamentação legal, exemplos práticos e pegadinhas de prova",
-    "Revisão espaçada nativa do Anki para reforçar a memorização",
-    "Conteúdo organizado por matérias e subbaralhos",
-    "Compatível com Anki no computador, Android e iPhone",
-    "Atualizações do material conforme as condições informadas na oferta",
-    "Compra única, sem mensalidade ou renovação"
-  ],
-  "topics": [
-    "10.759 flashcards de Certo ou Errado",
-    "Cards de oclusão da legislação",
-    "61 assuntos do edital DP-4/321/26",
-    "Gabaritos comentados e fundamentação legal literal",
-    "Exemplos práticos e pegadinhas de prova",
-    "220 apostilas esquematizadas em PDF",
-    "Quadros comparativos e listas de memorização"
-  ],
-  "includes": [
-    "Baralho digital Anki com 10.759 flashcards",
-    "Cards de oclusão da lei",
-    "220 apostilas esquematizadas em PDF",
-    "61 assuntos organizados em subbaralhos na ordem do edital",
-    "Material pronto para importação no Anki",
-    "Passo a passo para utilização do material"
-  ],
-  "guarantee": "7 dias de garantia incondicional pela Eduzz.",
-  "faq": [
-    {
-      "q": "O que está incluído no material?",
-      "a": "São 10.759 flashcards, cards de oclusão da lei e 220 apostilas esquematizadas em PDF, organizados em 61 assuntos."
-    },
-    {
-      "q": "Como são os flashcards?",
-      "a": "São questões de Certo ou Errado com gabarito comentado, fundamentação legal literal, exemplos práticos e pegadinhas de prova."
-    },
-    {
-      "q": "O que são os cards de oclusão da lei?",
-      "a": "São cartões voltados à memorização de números, prazos e expressões exatas dos dispositivos legais."
-    },
-    {
-      "q": "Como estão organizados os conteúdos?",
-      "a": "Os 61 assuntos seguem a ordem do edital DP-4/321/26, cada um separado em seu próprio subbaralho."
-    },
-    {
-      "q": "Preciso saber utilizar o Anki?",
-      "a": "Não. O material já vem pronto para importação e acompanha um passo a passo para orientar sua utilização."
-    },
-    {
-      "q": "Funciona no iPhone?",
-      "a": "Sim. O arquivo pode ser utilizado no Anki para iPhone. O site conta com um sistema offline onde você importa e utiliza diretamente os cards de revisão."
-    },
-    {
-      "q": "Recebo atualizações do material?",
-      "a": "Se o edital ou a legislação mudar, o baralho será atualizado e você poderá baixar a nova versão pelo link da sua compra."
-    },
-    {
-      "q": "Posso imprimir ou compartilhar o material?",
-      "a": "O material é destinado ao uso pessoal. Não é permitido revendê-lo ou compartilhá-lo com terceiros."
-    },
-    {
-      "q": "Como funciona a entrega?",
-      "a": "Após a compra, você recebe o link de download para acessar o material e começar a estudar."
-    },
-    {
-      "q": "O produto possui garantia?",
-      "a": "Sim. Você conta com 7 dias de garantia incondicional pela Eduzz."
-    },
-    {
-      "q": "Preciso pagar mensalidade?",
-      "a": "Não. É uma compra única, sem mensalidade ou renovação."
-    }
-  ]
-}
-
-
-
-
-
-    
-
   ]
 }

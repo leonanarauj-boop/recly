@@ -1291,6 +1291,61 @@ const Shop = (() => {
   return { catalog, site };
 })();
 
+// Contas e turmas: conversa com o servidor (Cloudflare Worker). Os baralhos nunca saem do aparelho;
+// só são enviados o apelido e os números de estudo por dia (cartões revisados e tempo).
+const Cloud = (() => {
+  const TK = 'recly.token', UK = 'recly.user', PK = 'recly.pendingInvite', SK = 'recly.lastSync';
+  const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
+  let apiBase = null;
+  async function base() {
+    if (apiBase) return apiBase;
+    const { cat } = await Shop.catalog();
+    apiBase = cat && (cat.turmasApi || cat.api) ? String(cat.turmasApi || cat.api).replace(/\/+$/, '') : null;
+    return apiBase;
+  }
+  const token = () => ls.get(TK);
+  const user = () => { try { return JSON.parse(ls.get(UK) || 'null'); } catch (e) { return null; } };
+  const setUser = u => ls.set(UK, u ? JSON.stringify(u) : null);
+  async function api(path, method = 'GET', body) {
+    const b = await base();
+    if (!b || /COLE-AQUI/.test(b)) throw new Error('As turmas ainda não foram configuradas.');
+    let r;
+    try { r = await fetch(b + path, { method, headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: 'Bearer ' + token() } : {}) }, body: body ? JSON.stringify(body) : undefined }); }
+    catch (e) { const er = new Error('Sem conexão. As turmas precisam de internet.'); er.offline = true; throw er; }
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && token()) { ls.set(TK, null); setUser(null); }
+    if (!r.ok) { const er = new Error(j.error || 'Algo deu errado. Tente de novo.'); er.status = r.status; throw er; }
+    return j;
+  }
+  async function start(email) { return api('/auth/start', 'POST', { email }); }
+  async function verify(email, code) { const j = await api('/auth/verify', 'POST', { email, code }); ls.set(TK, j.token); setUser(j.user); sync(true); return j.user; }
+  async function logout() { try { await api('/logout', 'POST'); } catch (e) { /* ignore */ } ls.set(TK, null); setUser(null); }
+  async function me() { const j = await api('/me'); setUser(j.me); return j; }
+  async function setNick(nick) { const j = await api('/me', 'POST', { nick }); setUser(j.user); return j.user; }
+  async function deleteAccount() { await api('/me', 'DELETE'); ls.set(TK, null); setUser(null); }
+
+  // número do dia do app (com virada às 4h) -> AAAA-MM-DD
+  const dayStr = d => new Date(d * 86400000).toISOString().slice(0, 10);
+  let syncing = null;
+  async function sync(force = false) {
+    if (!token()) return;
+    const last = +(ls.get(SK) || 0);
+    if (!force && Date.now() - last < 60000) return;
+    if (syncing) return syncing;
+    syncing = (async () => {
+      try {
+        const s = await Store.stats(), days = [];
+        for (let d = s.todayDay - 13; d <= s.todayDay; d++) { const e = s.per.get(d); if (e) days.push({ date: dayStr(d), n: e.n, ms: Math.round(e.ms || 0) }); }
+        await api('/progress', 'POST', { days, streak: s.streak });
+        ls.set(SK, String(Date.now()));
+      } catch (e) { /* tenta de novo depois */ } finally { syncing = null; }
+    })();
+    return syncing;
+  }
+  const pendingInvite = v => { if (v === undefined) return ls.get(PK); ls.set(PK, v); };
+  return { api, start, verify, logout, me, setNick, deleteAccount, sync, token, user, pendingInvite, base };
+})();
+
 // Instalação na tela inicial: Android/Chrome usa o prompt nativo; iPhone mostra o guia.
 let installPrompt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
@@ -1435,7 +1490,7 @@ function pickFiles(multiple = true) {
 }
 
 // ---------- Casca do app ----------
-const TABS = [['decks', '📚', 'Baralhos'], ['browse', '🔍', 'Navegar'], ['add', '➕', 'Adicionar'], ['stats', '📊', 'Estatísticas'], ['shop', '🛍️', 'Loja'], ['more', '⚙️', 'Mais']];
+const TABS = [['decks', '📚', 'Baralhos'], ['browse', '🔍', 'Navegar'], ['groups', '👥', 'Turmas'], ['stats', '📊', 'Estatísticas'], ['shop', '🛍️', 'Loja'], ['more', '⚙️', 'Mais']];
 let currentTab = 'decks';
 function shell() {
   const app = $('#app'); app.innerHTML = '';
@@ -1444,9 +1499,9 @@ function shell() {
 }
 function go(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === (tab === 'add' ? 'browse' : tab)));
   const v = $('#view'); v.innerHTML = ''; v.scrollTop = 0;
-  ({ decks: viewDecks, browse: viewBrowse, add: viewAdd, stats: viewStats, shop: viewShop, more: viewMore })[tab](v);
+  ({ decks: viewDecks, browse: viewBrowse, add: viewAdd, stats: viewStats, groups: viewGroups, shop: viewShop, more: viewMore })[tab](v);
 }
 const refresh = () => go(currentTab);
 
@@ -1588,7 +1643,7 @@ function startStudy(deck, mode = 'normal') {
   };
   window.addEventListener('message', onMsg);
 
-  function exit() { document.removeEventListener('keydown', onKey); window.removeEventListener('message', onMsg); if (audio) audio.pause(); root.remove(); refresh(); }
+  function exit() { document.removeEventListener('keydown', onKey); window.removeEventListener('message', onMsg); if (audio) audio.pause(); root.remove(); refresh(); Cloud.sync(true); }
   const sibling = id => c => c.nid !== id;
   function pick() {
     const now = Sched.nowSec();
@@ -1873,7 +1928,7 @@ function viewBrowse(v) {
     }
   };
   let tm; q.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(run, 250); });
-  v.append(h('header', { class: 'top' }, h('h1', null, 'Navegar')), q, info, list); run();
+  v.append(h('header', { class: 'top' }, h('h1', null, 'Navegar'), h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => go('add') }, '＋ Adicionar'))), q, info, list); run();
 }
 function rowSheet(c, n, done) {
   const m = modal([h('h3', null, 'Cartão'), h('div', { class: 'col' },
@@ -1903,7 +1958,7 @@ function viewAdd(v) {
   ds.value = addState.did;
   const model = Store.S.models.get(addState.mid), fe = fieldEditor(model);
   const tags = h('input', { class: 'input', type: 'text', placeholder: 'tags separadas por espaço', autocapitalize: 'off' });
-  v.append(h('header', { class: 'top' }, h('h1', null, 'Adicionar')),
+  v.append(h('header', { class: 'top' }, h('h1', null, 'Adicionar'), h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => go('browse') }, '‹ Navegar'))),
     h('div', { class: 'col' }, h('label', { class: 'lbl' }, 'Tipo de nota', ms), h('label', { class: 'lbl' }, 'Baralho', ds), fe.el, h('label', { class: 'lbl' }, 'Tags', tags),
       model.isCloze ? h('p', { class: 'muted' }, 'Selecione um trecho e toque em “Omitir”, ou escreva {{c1::resposta}}.') : null,
       h('button', { class: 'btn primary big', onclick: async () => {
@@ -2349,13 +2404,173 @@ async function importSample(it) {
   } catch (e) { console.error(e); b.close(); alertBox(e.message, 'Amostra'); }
 }
 
+// Aba "Turmas": conta (e-mail + código), turmas abertas e privadas, metas semanais e ranking.
+async function viewGroups(v) {
+  v.append(h('header', { class: 'top' }, h('h1', null, 'Turmas'),
+    Cloud.token() ? h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: accountSheet }, '👤 Conta')) : null));
+  const box = h('div', null, h('div', { class: 'spinner' })); v.append(box);
+  if (!Cloud.token()) { box.innerHTML = ''; box.append(loginCard(() => refresh())); return; }
+  let data;
+  try { await Cloud.sync(true); data = await Cloud.me(); }
+  catch (e) {
+    if (currentTab !== 'groups') return; box.innerHTML = '';
+    if (!Cloud.token()) { box.append(loginCard(() => refresh())); return; }
+    box.append(h('div', { class: 'welcome' }, h('div', { class: 'wl-ic' }, e.offline ? '📡' : '⚠️'), h('h2', null, e.offline ? 'Sem conexão' : 'Não foi possível carregar'), h('p', { class: 'muted' }, e.message),
+      h('button', { class: 'btn primary', onclick: refresh }, 'Tentar de novo'))); return;
+  }
+  if (currentTab !== 'groups') return;
+  box.innerHTML = '';
+  if (!data.me.nick) { box.append(nickCard(data.me, () => refresh())); return; }
+  const inv = Cloud.pendingInvite();
+  if (inv) { Cloud.pendingInvite(null); joinByCode(inv); }
+
+  for (const r of data.removed) box.append(h('div', { class: 'gnote bad' }, h('div', null, h('b', null, `Você saiu de “${r.name}”`), h('small', null, 'Ficou 7 dias sem estudar. Estude hoje e volte quando quiser.')),
+    h('button', { class: 'btn small primary', onclick: async () => { try { await Cloud.api('/groups/' + r.id + '/join', 'POST', {}); toast('Bem-vindo de volta!'); refresh(); } catch (e) { alertBox(e.message); } } }, 'Voltar')));
+  const warned = data.mine.filter(g => g.warn);
+  if (warned.length) box.append(h('div', { class: 'gnote warn' }, h('div', null, h('b', null, `${warned[0].inactiveDays} dias sem estudar`), h('small', null, `Estude hoje para não sair de ${warned.map(g => '“' + g.name + '”').join(', ')} (saída automática com 7 dias).`)),
+    h('button', { class: 'btn small primary', onclick: () => go('decks') }, 'Estudar')));
+
+  box.append(h('div', { class: 'ghello' }, h('span', null, 'Olá,'), h('b', null, data.me.nick), h('small', null, 'Estude todo dia para subir no ranking. Quem fica 7 dias sem estudar sai da turma.')));
+  box.append(h('h4', null, 'Minhas turmas'));
+  if (!data.mine.length) box.append(h('p', { class: 'muted' }, 'Você ainda não está em nenhuma turma. Entre em uma abaixo!'));
+  box.append(h('div', { class: 'glist' }, data.mine.map(g => groupRow(g, () => groupPage(g.id)))));
+  if (data.open.length) {
+    box.append(h('h4', null, 'Turmas abertas'));
+    box.append(h('div', { class: 'glist' }, data.open.map(g => groupRow(g, () => groupPage(g.id), h('button', { class: 'btn small primary', onclick: async e => {
+      e.stopPropagation(); try { await Cloud.api('/groups/' + g.id + '/join', 'POST', {}); toast('Você entrou na ' + g.name); refresh(); } catch (er) { alertBox(er.message); }
+    } }, 'Entrar')))));
+  }
+  const { cat } = await Shop.catalog();
+  box.append(h('h4', null, 'Turma privada'), h('div', { class: 'card2 gpriv' },
+    h('p', { class: 'muted' }, 'Crie uma turma só para você e seus amigos, com ranking e meta própria, e convide pelo link.'),
+    h('div', { class: 'col' },
+      data.me.credits > 0 ? h('button', { class: 'btn primary', onclick: () => createGroupSheet(data.me) }, `＋ Criar turma privada (${data.me.credits} crédito${data.me.credits > 1 ? 's' : ''})`)
+        : h('button', { class: 'btn primary', onclick: () => cat && cat.groupCheckout ? window.open(cat.groupCheckout, '_blank', 'noopener') : alertBox('A criação de turmas privadas estará disponível em breve.') }, '🔒 Criar turma privada' + (cat && cat.groupPrice ? ' · ' + cat.groupPrice : '')),
+      h('button', { class: 'btn', onclick: async () => { const c = await promptBox('Código do convite', '', 'Ex.: K7M2Q9XA'); if (c) joinByCode(c); } }, '🔑 Entrar com código')),
+    data.me.credits > 0 ? null : h('p', { class: 'muted s' }, `Depois de pagar, entre no Recly com o mesmo e-mail da compra (${data.me.email}) e o botão de criar aparece aqui.`)));
+}
+
+function groupRow(g, onclick, action) {
+  return h('button', { class: 'grow', onclick }, h('span', { class: 'gemo' }, g.emoji || '📚'),
+    h('div', null, h('b', null, g.name, g.private ? h('span', { class: 'gtag' }, 'privada') : null, g.owner ? h('span', { class: 'gtag' }, 'dono') : null),
+      h('small', null, [`${(g.members || 0).toLocaleString('pt-BR')} membro${g.members === 1 ? '' : 's'}`, g.desc].filter(Boolean).join(' · '))),
+    action || h('span', { class: 'ig-go' }, '›'));
+}
+
+function loginCard(done) {
+  const email = h('input', { class: 'input', type: 'email', placeholder: 'Seu e-mail', autocapitalize: 'off', autocomplete: 'email', inputmode: 'email' });
+  const code = h('input', { class: 'input code', type: 'text', placeholder: 'Código de 6 números', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6 });
+  const step2 = h('div', { class: 'col', style: 'display:none' }, h('p', { class: 'muted s' }, 'Enviamos um código para o seu e-mail. Confira também o spam.'), code,
+    h('button', { class: 'btn primary', onclick: async () => {
+      const b = busy('Entrando…'); try { await Cloud.verify(email.value, code.value); b.close(); done(); } catch (e) { b.close(); alertBox(e.message); }
+    } }, 'Entrar'), h('button', { class: 'linkbtn', onclick: () => { step1.style.display = ''; step2.style.display = 'none'; } }, 'Usar outro e-mail'));
+  const step1 = h('div', { class: 'col' }, email, h('button', { class: 'btn primary', onclick: async () => {
+    if (!email.value.trim()) return toast('Digite seu e-mail');
+    const b = busy('Enviando código…');
+    try { const r = await Cloud.start(email.value); b.close(); step1.style.display = 'none'; step2.style.display = ''; if (r.dev_code) code.value = r.dev_code; setTimeout(() => code.focus(), 50); }
+    catch (e) { b.close(); alertBox(e.message); }
+  } }, 'Receber código'));
+  return h('div', { class: 'glogin' },
+    h('div', { class: 'gl-hero' }, h('div', { class: 'gl-ic' }, '👥'), h('h2', null, 'Estude em turma'), h('p', null, 'Metas semanais, ranking com apelido e a turma do seu concurso puxando você para estudar todo dia.')),
+    h('ul', { class: 'gl-feats' }, h('li', null, '🏆 Ranking semanal por cartões revisados'), h('li', null, '🎯 Meta da turma toda semana'), h('li', null, '🔥 Constância: quem fica 7 dias parado sai da turma'), h('li', null, '🔒 Turmas privadas com amigos')),
+    h('div', { class: 'card2' }, h('h3', null, 'Entrar ou criar conta'), step1, step2,
+      h('p', { class: 'muted s' }, 'Sem senha: você recebe um código por e-mail. Seus baralhos continuam só no seu celular; enviamos apenas seu apelido e quantos cartões você estudou por dia. ', h('a', { href: '/privacidade/', target: '_blank' }, 'Política de privacidade'), ' · ', h('a', { href: '/termos/', target: '_blank' }, 'Termos de uso'))));
+}
+
+function nickCard(me, done) {
+  const nick = h('input', { class: 'input', placeholder: 'Ex.: FuturoEscrevente', maxlength: 20, autocapitalize: 'off' });
+  return h('div', { class: 'card2' }, h('h3', null, 'Escolha seu apelido'), h('p', { class: 'muted' }, 'É assim que você aparece no ranking das turmas. Seu e-mail nunca é mostrado.'), nick,
+    h('button', { class: 'btn primary wide', style: 'margin-top:10px', onclick: async () => { try { await Cloud.setNick(nick.value); done(); } catch (e) { alertBox(e.message); } } }, 'Salvar apelido'));
+}
+
+async function joinByCode(code) {
+  const b = busy('Entrando na turma…');
+  try { const r = await Cloud.api('/join', 'POST', { code }); b.close(); toast('Você entrou na ' + r.name); groupPage(r.id); if (currentTab === 'groups') refresh(); }
+  catch (e) { b.close(); alertBox(e.message); }
+}
+
+async function groupPage(gid) {
+  const ov = h('div', { class: 'ppage' }), sc = h('div', { class: 'pscroll' }, h('div', { class: 'spinner' }));
+  const close = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 220); if (currentTab === 'groups') refresh(); };
+  const title = h('span', { class: 'pbt', style: 'opacity:1' }, 'Turma');
+  ov.append(h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: close }, '‹ Turmas'), title), sc);
+  document.body.append(ov);
+  const load = async () => {
+    let d; try { await Cloud.sync(true); d = await Cloud.api('/groups/' + gid); } catch (e) { sc.innerHTML = ''; sc.append(h('p', { class: 'muted center', style: 'padding:30px' }, e.message)); return; }
+    const g = d.group; title.textContent = g.name; sc.innerHTML = '';
+    const inv = g.code ? location.origin + location.pathname + '#turma=' + g.code : null;
+    const wrap = h('div', { class: 'gwrap' });
+    wrap.append(h('div', { class: 'ghead' }, h('span', { class: 'gemo big' }, g.emoji || '📚'), h('div', null, h('h2', null, g.name), h('small', null, [g.private ? 'Turma privada' : 'Turma aberta', `${g.members} membro${g.members === 1 ? '' : 's'}`].join(' · ')))));
+    if (g.desc) wrap.append(h('p', { class: 'muted' }, g.desc));
+    if (d.me && d.me.warn) wrap.append(h('div', { class: 'gnote warn' }, h('div', null, h('b', null, `${d.me.inactiveDays} dias sem estudar`), h('small', null, d.me.removeIn ? `Estude hoje: em ${d.me.removeIn} dia${d.me.removeIn > 1 ? 's' : ''} você sai da turma.` : 'Estude hoje para continuar na turma.')),
+      h('button', { class: 'btn small primary', onclick: () => { ov.remove(); go('decks'); } }, 'Estudar')));
+    const wk = d.week;
+    wrap.append(h('div', { class: 'card2 gweek' }, h('div', { class: 'gwk-top' }, h('b', null, 'Meta da semana'), h('span', null, wk.goal ? `${wk.total.toLocaleString('pt-BR')} / ${wk.goal.toLocaleString('pt-BR')} cartões` : `${wk.total.toLocaleString('pt-BR')} cartões`)),
+      wk.goal ? h('div', { class: 'pbar2' }, h('div', { style: `width:${wk.pct}%` })) : null,
+      h('small', { class: 'muted' }, wk.goal ? (wk.pct >= 100 ? '🎉 Meta batida! Bora passar do limite.' : `${wk.pct}% da meta · a semana vai de segunda a domingo`) : 'A semana vai de segunda a domingo')));
+    if (!g.member) wrap.append(h('button', { class: 'btn primary wide', onclick: async () => { try { await Cloud.api('/groups/' + g.id + '/join', 'POST', {}); toast('Você entrou!'); load(); } catch (e) { alertBox(e.message); } } }, 'Entrar nesta turma'));
+    if (inv) wrap.append(h('div', { class: 'card2 ginv' }, h('b', null, 'Convide para a turma'), h('div', { class: 'gcode' }, g.code),
+      h('div', { class: 'grid2' }, h('button', { class: 'btn', onclick: async () => { try { if (navigator.share) await navigator.share({ title: g.name, text: `Entre na minha turma “${g.name}” no Recly:`, url: inv }); else { await navigator.clipboard.writeText(inv); toast('Link copiado'); } } catch (e) { /* cancelado */ } } }, '📤 Compartilhar'),
+        h('button', { class: 'btn', onclick: async () => { try { await navigator.clipboard.writeText(inv); toast('Link copiado'); } catch (e) { toast(inv); } } }, '🔗 Copiar link'))));
+    const podium = d.ranking.slice(0, 3), medal = ['🥇', '🥈', '🥉'];
+    wrap.append(h('h4', null, 'Ranking da semana'));
+    if (!d.ranking.length) wrap.append(h('p', { class: 'muted' }, 'Ninguém por aqui ainda.'));
+    wrap.append(h('div', { class: 'grank' }, d.ranking.map(r => h('div', { class: 'grk' + (r.me ? ' me' : ''), onclick: g.owner && r.id && !r.me ? async () => {
+      if (await confirmBox(`Remover “${r.nick}” da turma?`, 'Remover', true)) { try { await Cloud.api('/groups/' + g.id + '/kick', 'POST', { uid: r.id }); load(); } catch (e) { alertBox(e.message); } }
+    } : null },
+      h('span', { class: 'gpos' }, r.pos <= 3 && r.week > 0 ? medal[r.pos - 1] : r.pos + 'º'),
+      h('div', null, h('b', null, r.nick, r.me ? h('span', { class: 'gtag' }, 'você') : null, r.owner ? h('span', { class: 'gtag' }, 'dono') : null),
+        h('small', null, [`hoje ${r.today}`, r.minutes ? `${r.minutes} min na semana` : null, r.streak ? `🔥 ${r.streak} dia${r.streak > 1 ? 's' : ''}` : null].filter(Boolean).join(' · '))),
+      h('span', { class: 'gpts' }, r.week.toLocaleString('pt-BR'), h('small', null, 'cartões'))))));
+    if (g.owner) wrap.append(h('p', { class: 'muted s' }, 'Toque em um membro para removê-lo da turma.'));
+    const acts = h('div', { class: 'col', style: 'margin-top:18px' });
+    if (g.owner) acts.append(
+      h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Meta semanal da turma (cartões)', String(wk.goal || ''), 'Ex.: 3000'); if (n !== null) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { goal: +n || 0 }); load(); } catch (e) { alertBox(e.message); } } } }, '🎯 Mudar meta'),
+      h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Nome da turma', g.name); if (n) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { name: n }); load(); } catch (e) { alertBox(e.message); } } } }, '✎ Renomear'),
+      h('button', { class: 'btn', onclick: async () => { if (await confirmBox('Gerar um novo código? O link antigo deixa de funcionar.', 'Gerar')) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { newCode: true }); load(); } catch (e) { alertBox(e.message); } } } }, '↻ Novo código de convite'),
+      h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Excluir a turma “${g.name}”? Todos os membros saem e isso não pode ser desfeito.`, 'Excluir', true)) { try { await Cloud.api('/groups/' + g.id, 'DELETE'); close(); } catch (e) { alertBox(e.message); } } } }, '🗑 Excluir turma'));
+    else if (g.member) acts.append(h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Sair da turma “${g.name}”?`, 'Sair', true)) { try { await Cloud.api('/groups/' + g.id + '/leave', 'POST'); close(); } catch (e) { alertBox(e.message); } } } }, 'Sair da turma'));
+    wrap.append(acts); sc.append(wrap);
+  };
+  load();
+}
+
+function createGroupSheet(me) {
+  const name = h('input', { class: 'input', placeholder: 'Nome da turma', maxlength: 40 });
+  const goal = h('input', { class: 'input', type: 'number', inputmode: 'numeric', placeholder: 'Meta semanal (cartões), ex.: 2000' });
+  const emo = h('select', { class: 'input' }, ['🔒', '📚', '⚖️', '🏛️', '🛡️', '🚀', '🎯', '🔥', '🦉', '💪'].map(x => h('option', { value: x }, x)));
+  const m = modal([h('h3', null, 'Nova turma privada'), h('p', { class: 'muted s' }, 'Usa 1 crédito. Depois é só compartilhar o link de convite.'),
+    h('label', { class: 'lbl' }, 'Nome', name), h('label', { class: 'lbl' }, 'Ícone', emo), h('label', { class: 'lbl' }, 'Meta semanal da turma', goal),
+    h('div', { class: 'row end' }, h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'),
+      h('button', { class: 'btn primary', onclick: async () => {
+        try { const r = await Cloud.api('/groups', 'POST', { name: name.value, goal: +goal.value || 0, emoji: emo.value }); m.close(); toast('Turma criada!'); refresh(); groupPage(r.id); }
+        catch (e) { alertBox(e.message); }
+      } }, 'Criar'))]);
+}
+
+function accountSheet() {
+  const u = Cloud.user() || {};
+  const m = modal([h('h3', null, 'Sua conta'), h('p', { class: 'muted pre' }, `Apelido: ${u.nick || '—'}\nE-mail: ${u.email || '—'}`),
+    h('div', { class: 'col' },
+      h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Novo apelido', u.nick || ''); if (n) { try { await Cloud.setNick(n); m.close(); refresh(); toast('Apelido atualizado'); } catch (e) { alertBox(e.message); } } } }, '✎ Mudar apelido'),
+      h('button', { class: 'btn', onclick: async () => { m.close(); await Cloud.logout(); refresh(); } }, 'Sair da conta'),
+      h('button', { class: 'btn danger', onclick: async () => {
+        if (!await confirmBox('Apagar sua conta? Você sai de todas as turmas, suas turmas privadas são excluídas e seus dados de ranking são apagados do servidor. Seus baralhos no celular NÃO são apagados.', 'Apagar conta', true)) return;
+        try { await Cloud.deleteAccount(); m.close(); refresh(); toast('Conta apagada'); } catch (e) { alertBox(e.message); }
+      } }, '🗑 Apagar conta'),
+      h('button', { class: 'btn', onclick: () => m.close() }, 'Fechar'))]);
+}
+
 // Inicialização do app.
 (async function boot() {
   try {
     await Store.init();
-    shell(); go(/loja/.test(location.hash) ? 'shop' : 'decks');
+    const inv = /turma=([A-Za-z0-9]{6,12})/.exec(location.hash);
+    if (inv) { Cloud.pendingInvite(inv[1].toUpperCase()); history.replaceState(null, '', location.pathname); }
+    shell(); go(inv ? 'groups' : /loja/.test(location.hash) ? 'shop' : 'decks');
+    Cloud.sync();
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.querySelector('.study') && currentTab === 'decks') refresh(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) Cloud.sync(); if (!document.hidden && !document.querySelector('.study') && currentTab === 'decks') refresh(); });
   } catch (e) {
     console.error(e);
     $('#app').innerHTML = '<div style="padding:24px"><h2>Não foi possível abrir o banco de dados</h2><p>' + esc(e.message || e) + '</p><p>Se você está no modo de navegação privada, saia dele e abra o app novamente.</p></div>';
