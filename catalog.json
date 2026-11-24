@@ -1,7 +1,7 @@
 {
   "turmasApi": "https://recly-turmas.leonanarauj.workers.dev",
-  "groupCheckout": "",
-  "groupPrice": "",
+  "groupCheckout": "https://pay.kiwify.com.br/nJCH3S9",
+  "groupPrice": "R$ 19,90",
   "headline": "Baralhos prontos para sua aprovação. Estude offline, no seu ritmo.",
   "products": [
     {
