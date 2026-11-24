@@ -137,8 +137,14 @@ async function listGroups(env, u) {
   const pub = await all(env, 'SELECT g.*, (SELECT COUNT(*) FROM members x WHERE x.gid = g.id) AS members FROM groups g WHERE g.private = 0 AND g.id NOT IN (SELECT gid FROM members WHERE uid = ?) ORDER BY g.name', u.id);
   const removed = await all(env, 'SELECT g.id, g.name, r.at FROM removals r JOIN groups g ON g.id = r.gid WHERE r.uid = ? AND r.seen = 0', u.id);
   if (removed.length) await run(env, 'UPDATE removals SET seen = 1 WHERE uid = ?', u.id);
+  const ws = weekStart(), sum = {};
+  for (const g of mine) {
+    const r = await all(env, 'SELECT m.uid, us.nick, COALESCE(SUM(p.n), 0) AS week FROM members m JOIN users us ON us.id = m.uid LEFT JOIN progress p ON p.uid = m.uid AND p.date >= ? WHERE m.gid = ? GROUP BY m.uid ORDER BY week DESC, m.joined ASC', ws, g.id);
+    const i = r.findIndex(x => x.uid === u.id), total = r.reduce((a, x) => a + x.week, 0);
+    sum[g.id] = { myPos: i + 1, myWeek: i >= 0 ? r[i].week : 0, total, pct: g.goal ? Math.min(100, Math.round(total * 100 / g.goal)) : null, leader: r[0] && r[0].week > 0 ? r[0].nick : null, leaderWeek: r[0] ? r[0].week : 0 };
+  }
   return {
-    mine: mine.map(g => { const days = inactivity(g, u); return groupOut(g, { uid: u.id, inactiveDays: days, warn: g.owner !== u.id && days >= WARN_DAYS }); }),
+    mine: mine.map(g => { const days = inactivity(g, u); return groupOut(g, { uid: u.id, inactiveDays: days, warn: g.owner !== u.id && days >= WARN_DAYS, ...sum[g.id] }); }),
     open: pub.map(g => groupOut(g, { uid: u.id })), removed: removed.map(r => ({ id: r.id, name: r.name })), me: publicMe(u),
   };
 }
@@ -150,7 +156,16 @@ async function groupDetail(env, u, gid) {
       COALESCE((SELECT SUM(p.ms) FROM progress p WHERE p.uid = u.id AND p.date >= ?), 0) AS wms, COALESCE((SELECT n FROM progress p WHERE p.uid = u.id AND p.date = ?), 0) AS today
       FROM members m JOIN users u ON u.id = m.uid WHERE m.gid = ? ORDER BY week DESC, u.streak DESC, m.joined ASC LIMIT 500`, ws, ws, brDate(), gid);
   const total = rows.reduce((a, r) => a + r.week, 0);
+  const daysG = await all(env, 'SELECT p.date, SUM(p.n) AS n, SUM(p.ms) AS ms FROM progress p JOIN members m ON m.uid = p.uid AND m.gid = ? WHERE p.date >= ? GROUP BY p.date', gid, ws);
+  const daysMe = await all(env, 'SELECT date, n, ms FROM progress WHERE uid = ? AND date >= ?', u.id, ws);
+  const pws = brDate(Date.parse(ws + 'T12:00:00Z') - 7 * 864e5 + 3 * 3600e3);
+  const prev = await all(env, 'SELECT us.nick, SUM(p.n) AS week FROM members m JOIN users us ON us.id = m.uid JOIN progress p ON p.uid = m.uid AND p.date >= ? AND p.date < ? WHERE m.gid = ? GROUP BY m.uid HAVING week > 0 ORDER BY week DESC LIMIT 3', pws, ws, gid);
+  const dates = [...Array(7).keys()].map(i => new Date(Date.parse(ws + 'T12:00:00Z') + i * 864e5).toISOString().slice(0, 10));
+  const pick = (arr, d) => arr.find(x => x.date === d) || { n: 0, ms: 0 };
   return {
+    days: dates.map(d => ({ date: d, group: pick(daysG, d).n || 0, me: pick(daysMe, d).n || 0, future: d > brDate() })),
+    prev: prev.map(r => ({ nick: r.nick || 'Sem apelido', week: r.week })),
+    totalMinutes: Math.round(rows.reduce((a, r) => a + r.wms, 0) / 60000),
     group: { ...groupOut({ ...g, members: rows.length }, { uid: u.id }), code: g.owner === u.id ? g.code : undefined, member: !!mem },
     week: { start: ws, total, goal: g.goal, pct: g.goal ? Math.min(100, Math.round(total * 100 / g.goal)) : null },
     ranking: rows.map((r, i) => ({ pos: i + 1, nick: r.nick || 'Sem apelido', week: r.week, minutes: Math.round(r.wms / 60000), today: r.today, streak: r.streak || 0, me: r.id === u.id, owner: r.id === g.owner, id: g.owner === u.id ? r.id : undefined })),

@@ -2433,7 +2433,7 @@ async function viewGroups(v) {
   box.append(h('div', { class: 'ghello' }, h('span', null, 'Olá,'), h('b', null, data.me.nick), h('small', null, 'Estude todo dia para subir no ranking. Quem fica 7 dias sem estudar sai da turma.')));
   box.append(h('h4', null, 'Minhas turmas'));
   if (!data.mine.length) box.append(h('p', { class: 'muted' }, 'Você ainda não está em nenhuma turma. Entre em uma abaixo!'));
-  box.append(h('div', { class: 'glist' }, data.mine.map(g => groupRow(g, () => groupPage(g.id)))));
+  box.append(h('div', { class: 'gcards' }, data.mine.map(g => myGroupCard(g, () => groupPage(g.id)))));
   if (data.open.length) {
     box.append(h('h4', null, 'Turmas abertas'));
     box.append(h('div', { class: 'glist' }, data.open.map(g => groupRow(g, () => groupPage(g.id), h('button', { class: 'btn small primary', onclick: async e => {
@@ -2489,50 +2489,228 @@ async function joinByCode(code) {
   catch (e) { b.close(); alertBox(e.message); }
 }
 
+// ---------- visual da turma ----------
+const G_GRADS = [['#4f46e5', '#7c3aed'], ['#0ea5e9', '#2563eb'], ['#059669', '#0d9488'], ['#db2777', '#9333ea'], ['#ea580c', '#dc2626'], ['#0f172a', '#4338ca']];
+const hashStr = s => { let x = 0; for (const c of String(s)) x = (x * 31 + c.charCodeAt(0)) >>> 0; return x; };
+const gGrad = id => G_GRADS[hashStr(id) % G_GRADS.length];
+const AV_COLORS = ['#f97316', '#22c55e', '#06b6d4', '#a855f7', '#ec4899', '#eab308', '#3b82f6', '#14b8a6', '#ef4444', '#6366f1'];
+const initials = n => String(n || '?').replace(/[_.\-]+/g, ' ').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+const avatar = (nick, cls = '') => h('span', { class: 'gav ' + cls, style: `background:${AV_COLORS[hashStr(nick) % AV_COLORS.length]}` }, initials(nick));
+const nf = n => Number(n || 0).toLocaleString('pt-BR');
+const DOW_SHORT = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+const fmtDM = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}`; };
+function weekLabel(days) { return days && days.length ? `${fmtDM(days[0].date)} a ${fmtDM(days[6].date)}` : ''; }
+
+function myGroupCard(g, onclick) {
+  const [c1, c2] = gGrad(g.id);
+  return h('button', { class: 'gcard', onclick, style: `--g1:${c1};--g2:${c2}` },
+    h('div', { class: 'gc-top' }, h('span', { class: 'gc-emo' }, g.emoji || '📚'),
+      h('div', null, h('b', null, g.name), h('small', null, `${nf(g.members)} membro${g.members === 1 ? '' : 's'}` + (g.private ? ' · privada' : ''))),
+      g.myPos ? h('span', { class: 'gc-pos' }, h('small', null, 'você'), `#${g.myPos}`) : null),
+    h('div', { class: 'gc-stats' },
+      h('div', null, h('b', null, nf(g.myWeek)), h('small', null, 'seus cartões')),
+      h('div', null, h('b', null, nf(g.total)), h('small', null, 'a turma')),
+      h('div', null, h('b', null, g.leader ? g.leader : '—'), h('small', null, g.leader ? `lidera com ${nf(g.leaderWeek)}` : 'sem líder ainda'))),
+    g.goal ? h('div', { class: 'gc-goal' }, h('div', { class: 'gc-bar' }, h('i', { style: `width:${g.pct || 0}%` })), h('small', null, `${g.pct || 0}% da meta semanal`)) : null);
+}
+
+function ringSvg(pct, big, small) {
+  const r = 52, c = 2 * Math.PI * r, p = Math.max(0, Math.min(100, pct || 0));
+  return `<svg viewBox="0 0 130 130" class="gring"><circle cx="65" cy="65" r="${r}" class="gr-bg"/><circle cx="65" cy="65" r="${r}" class="gr-fg" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p / 100)}" transform="rotate(-90 65 65)"/><text x="65" y="64" class="gr-big">${big}</text><text x="65" y="84" class="gr-small">${small}</text></svg>`;
+}
+
 async function groupPage(gid) {
-  const ov = h('div', { class: 'ppage' }), sc = h('div', { class: 'pscroll' }, h('div', { class: 'spinner' }));
+  const ov = h('div', { class: 'ppage gpage' }), sc = h('div', { class: 'pscroll' }, h('div', { class: 'spinner' }));
   const close = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 220); if (currentTab === 'groups') refresh(); };
-  const title = h('span', { class: 'pbt', style: 'opacity:1' }, 'Turma');
-  ov.append(h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: close }, '‹ Turmas'), title), sc);
-  document.body.append(ov);
+  const title = h('span', { class: 'pbt' }, 'Turma'), shareBtn = h('button', { class: 'pshare', style: 'visibility:hidden' }, '📸');
+  const bar = h('div', { class: 'pbar' }, h('button', { class: 'pback', onclick: close }, '‹ Turmas'), title, shareBtn);
+  ov.append(bar, sc); document.body.append(ov);
+  sc.addEventListener('scroll', () => bar.classList.toggle('t', sc.scrollTop > 140), { passive: true });
+  let tab = 'geral';
   const load = async () => {
     let d; try { await Cloud.sync(true); d = await Cloud.api('/groups/' + gid); } catch (e) { sc.innerHTML = ''; sc.append(h('p', { class: 'muted center', style: 'padding:30px' }, e.message)); return; }
-    const g = d.group; title.textContent = g.name; sc.innerHTML = '';
-    const inv = g.code ? location.origin + location.pathname + '#turma=' + g.code : null;
+    d.days = d.days || []; d.prev = d.prev || [];
+    const g = d.group, R = d.ranking, me = R.find(r => r.me), n = R.length, wk = d.week, [c1, c2] = gGrad(g.id);
+    const avg = n ? Math.round(wk.total / n) : 0, leader = R[0] || null;
+    title.textContent = g.name; sc.innerHTML = '';
+    shareBtn.style.visibility = 'visible'; shareBtn.onclick = () => groupShare(d);
     const wrap = h('div', { class: 'gwrap' });
-    wrap.append(h('div', { class: 'ghead' }, h('span', { class: 'gemo big' }, g.emoji || '📚'), h('div', null, h('h2', null, g.name), h('small', null, [g.private ? 'Turma privada' : 'Turma aberta', `${g.members} membro${g.members === 1 ? '' : 's'}`].join(' · ')))));
-    if (g.desc) wrap.append(h('p', { class: 'muted' }, g.desc));
+    // ----- capa -----
+    wrap.append(h('div', { class: 'ghero', style: `--g1:${c1};--g2:${c2}` },
+      h('div', { class: 'gh-row' }, h('span', { class: 'gh-emo' }, g.emoji || '📚'), h('div', null, h('h2', null, g.name), h('small', null, `${g.private ? 'Turma privada' : 'Turma aberta'} · ${nf(n)} membro${n === 1 ? '' : 's'}`))),
+      h('div', { class: 'gh-week' }, `Semana de ${weekLabel(d.days)}`),
+      h('div', { class: 'gh-stats' },
+        h('div', null, h('b', null, me ? `#${me.pos}` : '—'), h('small', null, me ? `de ${n}` : 'fora da turma')),
+        h('div', null, h('b', null, nf(me ? me.week : 0)), h('small', null, 'seus cartões')),
+        h('div', null, h('b', null, nf(wk.total)), h('small', null, 'da turma'))),
+      h('button', { class: 'gh-share', onclick: () => groupShare(d) }, '📸 Compartilhar no Instagram')));
     if (d.me && d.me.warn) wrap.append(h('div', { class: 'gnote warn' }, h('div', null, h('b', null, `${d.me.inactiveDays} dias sem estudar`), h('small', null, d.me.removeIn ? `Estude hoje: em ${d.me.removeIn} dia${d.me.removeIn > 1 ? 's' : ''} você sai da turma.` : 'Estude hoje para continuar na turma.')),
       h('button', { class: 'btn small primary', onclick: () => { ov.remove(); go('decks'); } }, 'Estudar')));
-    const wk = d.week;
-    wrap.append(h('div', { class: 'card2 gweek' }, h('div', { class: 'gwk-top' }, h('b', null, 'Meta da semana'), h('span', null, wk.goal ? `${wk.total.toLocaleString('pt-BR')} / ${wk.goal.toLocaleString('pt-BR')} cartões` : `${wk.total.toLocaleString('pt-BR')} cartões`)),
-      wk.goal ? h('div', { class: 'pbar2' }, h('div', { style: `width:${wk.pct}%` })) : null,
-      h('small', { class: 'muted' }, wk.goal ? (wk.pct >= 100 ? '🎉 Meta batida! Bora passar do limite.' : `${wk.pct}% da meta · a semana vai de segunda a domingo`) : 'A semana vai de segunda a domingo')));
-    if (!g.member) wrap.append(h('button', { class: 'btn primary wide', onclick: async () => { try { await Cloud.api('/groups/' + g.id + '/join', 'POST', {}); toast('Você entrou!'); load(); } catch (e) { alertBox(e.message); } } }, 'Entrar nesta turma'));
-    if (inv) wrap.append(h('div', { class: 'card2 ginv' }, h('b', null, 'Convide para a turma'), h('div', { class: 'gcode' }, g.code),
-      h('div', { class: 'grid2' }, h('button', { class: 'btn', onclick: async () => { try { if (navigator.share) await navigator.share({ title: g.name, text: `Entre na minha turma “${g.name}” no Recly:`, url: inv }); else { await navigator.clipboard.writeText(inv); toast('Link copiado'); } } catch (e) { /* cancelado */ } } }, '📤 Compartilhar'),
-        h('button', { class: 'btn', onclick: async () => { try { await navigator.clipboard.writeText(inv); toast('Link copiado'); } catch (e) { toast(inv); } } }, '🔗 Copiar link'))));
-    const podium = d.ranking.slice(0, 3), medal = ['🥇', '🥈', '🥉'];
-    wrap.append(h('h4', null, 'Ranking da semana'));
-    if (!d.ranking.length) wrap.append(h('p', { class: 'muted' }, 'Ninguém por aqui ainda.'));
-    wrap.append(h('div', { class: 'grank' }, d.ranking.map(r => h('div', { class: 'grk' + (r.me ? ' me' : ''), onclick: g.owner && r.id && !r.me ? async () => {
-      if (await confirmBox(`Remover “${r.nick}” da turma?`, 'Remover', true)) { try { await Cloud.api('/groups/' + g.id + '/kick', 'POST', { uid: r.id }); load(); } catch (e) { alertBox(e.message); } }
-    } : null },
-      h('span', { class: 'gpos' }, r.pos <= 3 && r.week > 0 ? medal[r.pos - 1] : r.pos + 'º'),
-      h('div', null, h('b', null, r.nick, r.me ? h('span', { class: 'gtag' }, 'você') : null, r.owner ? h('span', { class: 'gtag' }, 'dono') : null),
-        h('small', null, [`hoje ${r.today}`, r.minutes ? `${r.minutes} min na semana` : null, r.streak ? `🔥 ${r.streak} dia${r.streak > 1 ? 's' : ''}` : null].filter(Boolean).join(' · '))),
-      h('span', { class: 'gpts' }, r.week.toLocaleString('pt-BR'), h('small', null, 'cartões'))))));
-    if (g.owner) wrap.append(h('p', { class: 'muted s' }, 'Toque em um membro para removê-lo da turma.'));
-    const acts = h('div', { class: 'col', style: 'margin-top:18px' });
-    if (g.owner) acts.append(
-      h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Meta semanal da turma (cartões)', String(wk.goal || ''), 'Ex.: 3000'); if (n !== null) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { goal: +n || 0 }); load(); } catch (e) { alertBox(e.message); } } } }, '🎯 Mudar meta'),
-      h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Nome da turma', g.name); if (n) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { name: n }); load(); } catch (e) { alertBox(e.message); } } } }, '✎ Renomear'),
-      h('button', { class: 'btn', onclick: async () => { if (await confirmBox('Gerar um novo código? O link antigo deixa de funcionar.', 'Gerar')) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { newCode: true }); load(); } catch (e) { alertBox(e.message); } } } }, '↻ Novo código de convite'),
-      h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Excluir a turma “${g.name}”? Todos os membros saem e isso não pode ser desfeito.`, 'Excluir', true)) { try { await Cloud.api('/groups/' + g.id, 'DELETE'); close(); } catch (e) { alertBox(e.message); } } } }, '🗑 Excluir turma'));
-    else if (g.member) acts.append(h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Sair da turma “${g.name}”?`, 'Sair', true)) { try { await Cloud.api('/groups/' + g.id + '/leave', 'POST'); close(); } catch (e) { alertBox(e.message); } } } }, 'Sair da turma'));
-    wrap.append(acts); sc.append(wrap);
+    if (!g.member) wrap.append(h('button', { class: 'btn primary wide', style: 'margin-top:12px', onclick: async () => { try { await Cloud.api('/groups/' + g.id + '/join', 'POST', {}); toast('Você entrou!'); load(); } catch (e) { alertBox(e.message); } } }, 'Entrar nesta turma'));
+    // ----- abas -----
+    const body = h('div');
+    const tabs = h('div', { class: 'gtabs' }, [['geral', 'Visão geral'], ['ranking', 'Ranking'], ['vs', 'Você × turma']].map(([k, l]) =>
+      h('button', { class: 'gtab' + (tab === k ? ' on' : ''), onclick: () => { tab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); render(); }, 'data-k': k }, l)));
+    wrap.append(tabs, body);
+    const render = () => {
+      body.innerHTML = '';
+      if (tab === 'geral') {
+        const maxD = Math.max(1, ...d.days.map(x => x.group));
+        body.append(h('div', { class: 'gpanel goalp' },
+          h('div', { html: ringSvg(wk.pct || 0, wk.goal ? `${wk.pct}%` : nf(wk.total), wk.goal ? 'da meta' : 'cartões') }),
+          h('div', { class: 'goal-info' }, h('b', null, 'Meta da semana'), h('div', { class: 'gi-big' }, nf(wk.total), h('small', null, wk.goal ? ` / ${nf(wk.goal)}` : '')),
+            h('small', null, wk.goal ? (wk.pct >= 100 ? '🎉 Meta batida! Bora passar do limite.' : `Faltam ${nf(Math.max(0, wk.goal - wk.total))} cartões até domingo`) : 'Sem meta definida'),
+            h('small', null, `⏱️ ${fmtTime((d.totalMinutes || 0) * 60000)} estudados pela turma`))));
+        body.append(h('div', { class: 'gpanel' }, h('div', { class: 'gp-head' }, h('b', null, 'Cartões por dia'), h('span', { class: 'gleg' }, h('i', { class: 'lg-g' }), 'turma', h('i', { class: 'lg-m' }), 'você')),
+          h('div', { class: 'gbars' }, d.days.map((x, i) => h('div', { class: 'gb' + (x.future ? ' fut' : '') },
+            h('span', { class: 'gb-v' }, x.group ? nf(x.group) : ''),
+            h('div', { class: 'gb-col' }, h('i', { class: 'gb-g', style: `height:${x.group / maxD * 100}%` }), h('i', { class: 'gb-m', style: `height:${x.me / maxD * 100}%` })),
+            h('small', null, DOW_SHORT[i]))))));
+        const streakTop = [...R].sort((a, b) => b.streak - a.streak)[0], todayTop = [...R].sort((a, b) => b.today - a.today)[0], minTop = [...R].sort((a, b) => b.minutes - a.minutes)[0];
+        body.append(h('div', { class: 'ghl' },
+          hl('🔥', 'Mais constante', streakTop && streakTop.streak ? streakTop.nick : '—', streakTop && streakTop.streak ? `${streakTop.streak} dias seguidos` : 'ninguém ainda'),
+          hl('⚡', 'Destaque de hoje', todayTop && todayTop.today ? todayTop.nick : '—', todayTop && todayTop.today ? `${nf(todayTop.today)} cartões hoje` : 'ninguém estudou ainda'),
+          hl('⏱️', 'Mais tempo', minTop && minTop.minutes ? minTop.nick : '—', minTop && minTop.minutes ? `${fmtTime(minTop.minutes * 60000)} na semana` : '—'),
+          hl('👥', 'Média da turma', nf(avg), 'cartões por pessoa')));
+        if (g.code) {
+          const inv = location.origin + location.pathname + '#turma=' + g.code;
+          body.append(h('div', { class: 'gpanel ginv' }, h('b', null, 'Convide para a turma'), h('div', { class: 'gcode' }, g.code),
+            h('div', { class: 'grid2' }, h('button', { class: 'btn', onclick: async () => { try { if (navigator.share) await navigator.share({ title: g.name, text: `Entre na minha turma “${g.name}” no Recly:`, url: inv }); else { await navigator.clipboard.writeText(inv); toast('Link copiado'); } } catch (e) { /* cancelado */ } } }, '📤 Compartilhar'),
+              h('button', { class: 'btn', onclick: async () => { try { await navigator.clipboard.writeText(inv); toast('Link copiado'); } catch (e) { toast(inv); } } }, '🔗 Copiar link'))));
+        }
+        body.append(manageBox(g, wk, load, close));
+      } else if (tab === 'ranking') {
+        const top = R.slice(0, 3), order = [1, 0, 2].filter(i => top[i]);
+        if (top.length && top[0].week > 0) body.append(h('div', { class: 'gpodium' }, order.map(i => { const r = top[i]; return h('div', { class: 'pd pd' + (i + 1) + (r.me ? ' me' : '') },
+          avatar(r.nick, 'big'), h('b', null, r.nick), h('small', null, `${nf(r.week)} cartões`), h('div', { class: 'pd-base' }, ['🥇', '🥈', '🥉'][i])); })));
+        else body.append(h('div', { class: 'gpanel center muted' }, 'O pódio aparece quando alguém estudar esta semana. Seja o primeiro! 🚀'));
+        const max = Math.max(1, ...R.map(r => r.week));
+        body.append(h('div', { class: 'grank2' }, R.map(r => h('div', { class: 'grk2' + (r.me ? ' me' : ''), onclick: g.owner && r.id && !r.me ? async () => {
+          if (await confirmBox(`Remover “${r.nick}” da turma?`, 'Remover', true)) { try { await Cloud.api('/groups/' + g.id + '/kick', 'POST', { uid: r.id }); load(); } catch (e) { alertBox(e.message); } }
+        } : null },
+          h('span', { class: 'gpos' }, r.pos <= 3 && r.week > 0 ? ['🥇', '🥈', '🥉'][r.pos - 1] : r.pos + 'º'), avatar(r.nick),
+          h('div', { class: 'grk-mid' }, h('b', null, r.nick, r.me ? h('span', { class: 'gtag' }, 'você') : null, r.owner ? h('span', { class: 'gtag' }, 'dono') : null),
+            h('div', { class: 'grk-bar' }, h('i', { style: `width:${r.week / max * 100}%` })),
+            h('small', null, [`hoje ${nf(r.today)}`, r.minutes ? fmtTime(r.minutes * 60000) : null, r.streak ? `🔥 ${r.streak}` : null].filter(Boolean).join(' · '))),
+          h('span', { class: 'gpts' }, nf(r.week), h('small', null, 'cartões'))))));
+        if (g.owner) body.append(h('p', { class: 'muted s center' }, 'Toque em um membro para removê-lo da turma.'));
+        if (d.prev && d.prev.length) body.append(h('div', { class: 'gpanel' }, h('div', { class: 'gp-head' }, h('b', null, '🏆 Campeões da semana passada')),
+          h('div', { class: 'gprev' }, d.prev.map((r, i) => h('div', null, h('span', null, ['🥇', '🥈', '🥉'][i]), avatar(r.nick), h('b', null, r.nick), h('small', null, `${nf(r.week)} cartões`))))));
+      } else {
+        if (!me) { body.append(h('div', { class: 'gpanel center muted' }, 'Entre na turma para se comparar com os colegas.')); return; }
+        const above = R.filter(r => r.week > me.week).length, behind = R.filter(r => r.week < me.week).length, pctAhead = n > 1 ? Math.round(behind * 100 / (n - 1)) : 100;
+        const next = R[me.pos - 2], gap = next ? next.week - me.week + 1 : 0, avgMin = n ? Math.round(R.reduce((a, r) => a + r.minutes, 0) / n) : 0, avgStreak = n ? Math.round(R.reduce((a, r) => a + r.streak, 0) / n) : 0;
+        body.append(h('div', { class: 'gpanel gvs-hero' },
+          h('div', { html: ringSvg(pctAhead, pctAhead + '%', 'à frente') }),
+          h('div', null, h('b', null, me.pos === 1 && me.week > 0 ? 'Você lidera a turma! 👑' : `Você está em ${me.pos}º lugar`),
+            h('small', null, n > 1 ? `À frente de ${behind} de ${n - 1} colega${n - 1 === 1 ? '' : 's'}` : 'Convide colegas para se comparar'),
+            next ? h('small', { class: 'gvs-next' }, `Faltam ${nf(gap)} cartões para passar ${next.nick}`) : null)));
+        const cmp = (label, mine, avgV, lead, fmt = nf) => { const mx = Math.max(1, mine, avgV, lead); return h('div', { class: 'gpanel gcmp' }, h('div', { class: 'gp-head' }, h('b', null, label)),
+          cbar('Você', mine, mx, 'm', fmt), cbar('Média da turma', avgV, mx, 'a', fmt), cbar('Líder', lead, mx, 'l', fmt)); };
+        body.append(cmp('Cartões na semana', me.week, avg, leader ? leader.week : 0));
+        body.append(cmp('Tempo de estudo', me.minutes, avgMin, Math.max(...R.map(r => r.minutes)), v => fmtTime(v * 60000)));
+        body.append(cmp('Sequência de dias', me.streak, avgStreak, Math.max(...R.map(r => r.streak)), v => `${v} dia${v === 1 ? '' : 's'}`));
+        const myDays = d.days.filter(x => !x.future), studied = myDays.filter(x => x.me > 0).length;
+        body.append(h('div', { class: 'gpanel' }, h('div', { class: 'gp-head' }, h('b', null, 'Sua semana'), h('span', { class: 'muted s' }, `${studied} de ${myDays.length} dias`)),
+          h('div', { class: 'gdots' }, d.days.map((x, i) => h('div', { class: 'gdot' + (x.me > 0 ? ' on' : '') + (x.future ? ' fut' : '') }, h('span', null, x.me > 0 ? '✓' : ''), h('small', null, DOW_SHORT[i]))))));
+      }
+    };
+    render();
+    sc.append(wrap);
   };
   load();
+}
+const hl = (ic, lab, who, sub) => h('div', { class: 'ghl-i' }, h('span', null, ic), h('small', null, lab), h('b', null, who), h('small', null, sub));
+const cbar = (lab, v, mx, cls, fmt) => h('div', { class: 'cbar ' + cls }, h('span', null, lab), h('div', { class: 'cb-t' }, h('i', { style: `width:${Math.max(2, v / mx * 100)}%` })), h('b', null, fmt(v)));
+
+function manageBox(g, wk, load, close) {
+  const acts = h('div', { class: 'col', style: 'margin-top:16px' });
+  if (g.owner) acts.append(h('h4', null, 'Gerenciar turma'),
+    h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Meta semanal da turma (cartões)', String(wk.goal || ''), 'Ex.: 3000'); if (n !== null) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { goal: +n || 0 }); load(); } catch (e) { alertBox(e.message); } } } }, '🎯 Mudar meta'),
+    h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Nome da turma', g.name); if (n) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { name: n }); load(); } catch (e) { alertBox(e.message); } } } }, '✎ Renomear'),
+    h('button', { class: 'btn', onclick: async () => { if (await confirmBox('Gerar um novo código? O link antigo deixa de funcionar.', 'Gerar')) { try { await Cloud.api('/groups/' + g.id + '/update', 'POST', { newCode: true }); load(); } catch (e) { alertBox(e.message); } } } }, '↻ Novo código de convite'),
+    h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Excluir a turma “${g.name}”? Todos os membros saem e isso não pode ser desfeito.`, 'Excluir', true)) { try { await Cloud.api('/groups/' + g.id, 'DELETE'); close(); } catch (e) { alertBox(e.message); } } } }, '🗑 Excluir turma'));
+  else if (g.member) acts.append(h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Sair da turma “${g.name}”?`, 'Sair', true)) { try { await Cloud.api('/groups/' + g.id + '/leave', 'POST'); close(); } catch (e) { alertBox(e.message); } } } }, 'Sair da turma'));
+  return acts;
+}
+
+// ---------- imagens para compartilhar (1080×1350) ----------
+const G_SHARE = [['podium', '🏆 Pódio'], ['me', '🎯 Minha posição'], ['vs', '⚔️ Eu × turma'], ['goal', '📈 Meta da turma']];
+function gsHeader(ctx, d, pal, sub) { shareBase(ctx, pal, weekLabel(d.days)); text(ctx, `${d.group.emoji || ''} ${d.group.name}`.trim(), W / 2, 250, d.group.name.length > 22 ? 48 : 56, 800); text(ctx, sub, W / 2, 315, 38, 500, 0.85); }
+function gsAvatar(ctx, nick, x, y, r) {
+  ctx.fillStyle = AV_COLORS[hashStr(nick) % AV_COLORS.length]; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.stroke(); text(ctx, initials(nick), x, y + r * 0.36, r * 0.95, 800);
+}
+const cut = (s, n) => (s = String(s)).length > n ? s.slice(0, n - 1) + '…' : s;
+const G_DRAW = {
+  podium(ctx, d, pal) {
+    gsHeader(ctx, d, pal, 'Pódio da semana');
+    const top = d.ranking.slice(0, 3), spots = [[1, W / 2 - 300, 300], [0, W / 2, 420], [2, W / 2 + 300, 220]];
+    for (const [i, x, hgt] of spots) {
+      const r = top[i]; const base = 1120;
+      ctx.fillStyle = i === 0 ? 'rgba(255,255,255,.32)' : 'rgba(255,255,255,.2)'; rr(ctx, x - 135, base - hgt, 270, hgt, 28); ctx.fill();
+      text(ctx, ['1º', '2º', '3º'][i], x, base - hgt + 95, 80, 800, 0.95);
+      if (!r || !r.week) { text(ctx, '—', x, base - hgt - 60, 60, 700, 0.7); continue; }
+      gsAvatar(ctx, r.nick, x, base - hgt - 190, i === 0 ? 92 : 78);
+      text(ctx, ['🥇', '🥈', '🥉'][i], x + (i === 0 ? 75 : 62), base - hgt - 240, 64, 400);
+      text(ctx, cut(r.nick, 12), x, base - hgt - 40, 40, 800);
+      text(ctx, `${nf(r.week)} cartões`, x, base - hgt + 160, 34, 600, 0.9);
+    }
+    text(ctx, `${nf(d.week.total)} cartões revisados pela turma`, W / 2, 1215, 40, 700, 0.95);
+    footer(ctx, 'Estudar junto rende mais 🚀');
+  },
+  me(ctx, d, pal) {
+    const me = d.ranking.find(r => r.me) || { pos: '—', week: 0, streak: 0, minutes: 0 }, n = d.ranking.length;
+    gsHeader(ctx, d, pal, 'Minha posição na turma');
+    text(ctx, me.pos === 1 && me.week > 0 ? '👑' : '🎯', W / 2, 500, 140, 400);
+    text(ctx, `${me.pos}º`, W / 2, 760, 280, 800);
+    text(ctx, `de ${n} ${n === 1 ? 'pessoa' : 'pessoas'}`, W / 2, 840, 52, 600, 0.9);
+    tilesRow(ctx, [[nf(me.week), 'cartões'], [fmtTime(me.minutes * 60000), 'de estudo'], [me.streak ? `🔥 ${me.streak}` : '—', me.streak === 1 ? 'dia seguido' : 'dias seguidos']], 920);
+    const share = d.week.total ? Math.round(me.week * 100 / d.week.total) : 0;
+    text(ctx, `${share}% de tudo que a turma estudou`, W / 2, 1200, 40, 700, 0.95);
+    footer(ctx, me.pos === 1 ? 'Liderando a turma 🏆' : 'Rumo ao topo do ranking 🚀');
+  },
+  vs(ctx, d, pal) {
+    const R = d.ranking, me = R.find(r => r.me) || { week: 0, minutes: 0, streak: 0 }, n = R.length || 1;
+    gsHeader(ctx, d, pal, 'Eu × turma');
+    const avg = Math.round(d.week.total / n), lead = R[0] ? R[0].week : 0, mx = Math.max(1, me.week, avg, lead);
+    const rows = [['Eu', me.week, '#fff'], ['Média da turma', avg, 'rgba(255,255,255,.55)'], ['Líder', lead, 'rgba(255,255,255,.8)']];
+    rows.forEach(([lab, v, col], i) => {
+      const y = 410 + i * 150; text(ctx, lab, 90, y, 42, 700, 0.95, 'left'); text(ctx, `${nf(v)}`, W - 90, y, 42, 800, 1, 'right');
+      ctx.fillStyle = 'rgba(255,255,255,.18)'; rr(ctx, 90, y + 28, W - 180, 56, 28); ctx.fill();
+      ctx.fillStyle = col; rr(ctx, 90, y + 28, Math.max(56, (W - 180) * v / mx), 56, 28); ctx.fill();
+    });
+    const behind = R.filter(r => r.week < me.week).length, pct = n > 1 ? Math.round(behind * 100 / (n - 1)) : 100;
+    text(ctx, `${pct}%`, W / 2, 1050, 170, 800); text(ctx, 'da turma ficou atrás de mim', W / 2, 1120, 44, 600, 0.9);
+    text(ctx, 'em cartões revisados nesta semana', W / 2, 1180, 34, 500, 0.8);
+    footer(ctx, me.week >= avg ? 'Acima da média 📈' : 'Bora subir no ranking 🎯');
+  },
+  goal(ctx, d, pal) {
+    gsHeader(ctx, d, pal, 'Meta da turma');
+    const wk = d.week, p = wk.goal ? Math.min(1, wk.total / wk.goal) : 0, cx = W / 2, cy = 610, r = 210;
+    ctx.lineCap = 'round'; ctx.lineWidth = 46; ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+    if (p > 0) { ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); ctx.stroke(); }
+    text(ctx, wk.goal ? `${Math.round(p * 100)}%` : nf(wk.total), cx, cy + 40, 150, 800); text(ctx, wk.goal ? `${nf(wk.total)} de ${nf(wk.goal)}` : 'cartões', cx, cy + 110, 40, 600, 0.9);
+    const max = Math.max(1, ...d.days.map(x => x.group)), bw = 92, gap = 30, x0 = (W - (7 * bw + 6 * gap)) / 2, base = 1150;
+    d.days.forEach((x, i) => { const bx = x0 + i * (bw + gap), bh = x.group ? Math.max(14, x.group / max * 200) : 8;
+      ctx.fillStyle = x.future ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.75)'; rr(ctx, bx, base - bh, bw, bh, Math.min(18, bh / 2)); ctx.fill(); text(ctx, DOW_SHORT[i], bx + bw / 2, base + 45, 30, 600, 0.85); if (x.group) text(ctx, nf(x.group), bx + bw / 2, base - bh - 14, 28, 700, 0.9); });
+    footer(ctx, p >= 1 ? 'Meta batida em equipe! 🎉' : 'Juntos até a meta 🎯');
+  },
+};
+function groupShare(d) {
+  const cv = h('canvas', { class: 'sharecv' }); let pi = hashStr(d.group.id) % PALETTES.length, kind = d.ranking.some(r => r.week > 0) ? 'podium' : 'goal', blob = null;
+  const seg = h('div', { class: 'seg' });
+  const redraw = () => { cv.width = W; cv.height = H; const ctx = cv.getContext('2d'); ctx.textBaseline = 'alphabetic'; G_DRAW[kind](ctx, d, PALETTES[pi]); blob = null; cv.toBlob(b => { blob = b; }, 'image/png'); [...seg.children].forEach(b => b.classList.toggle('on', b.dataset.k === kind)); };
+  G_SHARE.forEach(([k, l]) => seg.append(h('button', { class: 'segb', 'data-k': k, onclick: () => { kind = k; redraw(); } }, l)));
+  redraw();
+  const fname = () => `recly-turma-${kind}.png`;
+  const download = () => { if (!blob) return; const a = h('a', { href: URL.createObjectURL(blob), download: fname() }); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); };
+  const m = modal([h('h3', null, 'Compartilhar a turma'), seg, h('div', { class: 'sharebox' }, cv),
+    h('div', { class: 'col' },
+      h('button', { class: 'btn primary', onclick: async () => { if (!blob) return; const f = new File([blob], fname(), { type: 'image/png' });
+        try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: `${d.group.name} no Recly 📚` }); return; } } catch (e) { if (e.name === 'AbortError') return; } download(); } }, 'Compartilhar / Salvar imagem'),
+      h('button', { class: 'btn', onclick: () => { pi = (pi + 1) % PALETTES.length; redraw(); } }, '🎨 Trocar cores'),
+      h('button', { class: 'btn', onclick: () => m.close() }, 'Fechar'))], { full: true });
 }
 
 function createGroupSheet(me) {
