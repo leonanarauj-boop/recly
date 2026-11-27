@@ -623,11 +623,11 @@ const Store = (() => {
   // ---------- Caderno de anotações ----------
   const saveNotebook = () => put('meta', { key: 'notebook', value: S.notebook });
   const annotationFor = cid => S.notebook.find(e => e.cid === cid) || null;
-  async function saveAnnotation(card, text, back) {
+  async function saveAnnotation(card, text, snap) {
     const now = Date.now(), dk = S.decks.get(card.did);
     let e = annotationFor(card.id);
     if (!e) { e = { id: newId(), cid: card.id, nid: card.nid, created: now }; S.notebook.push(e); }
-    Object.assign(e, { did: card.did, deck: dk ? dk.name : (e.deck || ''), text, back, updated: now });
+    Object.assign(e, { did: card.did, deck: dk ? dk.name : (e.deck || ''), text, updated: now }, snap || {});
     await saveNotebook(); return e;
   }
   async function deleteAnnotation(id) { S.notebook = S.notebook.filter(e => e.id !== id); await saveNotebook(); }
@@ -1886,92 +1886,126 @@ function deckSheet(d) {
 }
 
 // Caderno de anotações: lápis flutuante no estudo + caderno na aba Baralhos.
+// Cada anotação guarda uma miniatura do cartão original (frente e verso) que vira ao toque.
 const PENCIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 
-/** HTML limpo do verso do cartão (sem a frente, sem scripts/estilos). Mantém nomes de mídia. */
-function versoOf(card) {
+/** Frente/verso do cartão como no estudo (HTML original + CSS do modelo). */
+function cardSnap(card) {
   const note = Store.S.notes.get(card.nid); if (!note) return null;
   const model = Store.S.models.get(note.mid); if (!model) return null;
-  const dk = Store.S.decks.get(card.did);
-  const opts = { deckName: dk ? dk.name : '' };
-  const full = Render.render(note, model, card, true, opts).html;
-  const m = full.match(/<hr[^>]*id\s*=\s*["']?answer["']?[^>]*>/i);
-  let html = cleanHTML(m ? full.slice(m.index + m[0].length) : full);
-  if (!m) html = withoutFront(html, cleanHTML(Render.render(note, model, card, false, opts).html));
-  if (!Render.stripHTML(html).trim() && !/<img/i.test(html)) html = cleanHTML(full);
-  return html;
+  const dk = Store.S.decks.get(card.did), opts = { deckName: dk ? dk.name : '' };
+  return { q: Render.render(note, model, card, false, opts).html, a: Render.render(note, model, card, true, opts).html, css: model.css || '' };
 }
-/** Remove do verso os blocos que já aparecem na frente (modelos que repetem a pergunta no verso). */
-function withoutFront(ans, front) {
-  const key = el => (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-  const fd = new DOMParser().parseFromString('<div>' + front + '</div>', 'text/html');
-  const seen = new Set([...fd.body.querySelectorAll('*')].map(key).filter(Boolean));
-  const ad = new DOMParser().parseFromString('<div>' + ans + '</div>', 'text/html');
-  const root = ad.body.firstChild;
-  for (const el of [...root.querySelectorAll('*')]) {
-    if (!el.isConnected || el.querySelector('img')) continue;
-    const k = key(el); if (!k || !seen.has(k)) continue;
-    const par = el.parentElement; // palavra/trecho dentro de uma frase (ex.: "GABARITO: CERTO"): mantém
-    if (/^(SPAN|B|I|U|EM|STRONG|FONT|SUB|SUP|MARK|SMALL|CODE)$/.test(el.tagName) && par !== root && key(par) !== k) continue;
-    el.remove();
-  }
-  // nós de texto soltos iguais a trechos da frente
-  [...root.childNodes].filter(n => n.nodeType === 3 && seen.has(n.textContent.replace(/\s+/g, ' ').trim().toLowerCase())).forEach(n => n.remove());
-  let out = root.innerHTML.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>').replace(/^(\s|<br\s*\/?>)+|(\s|<br\s*\/?>)+$/gi, '');
-  return Render.stripHTML(out).trim() || /<img/i.test(out) ? out : ans;
-}
-function cleanHTML(html) {
-  const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
-  doc.querySelectorAll('script,style,link,meta,iframe,object,embed,input,textarea,button,select,audio,video,source,a.replay,svg').forEach(e => e.remove());
-  doc.querySelectorAll('*').forEach(el => {
-    for (const a of [...el.attributes]) {
-      const n = a.name.toLowerCase();
-      const keep = (n === 'src' && el.tagName === 'IMG') || (n === 'alt') || (n === 'colspan') || (n === 'rowspan') || (n === 'class' && /\bcloze\b/.test(a.value));
-      if (!keep) el.removeAttribute(a.name);
-    }
-    if (el.tagName === 'A') el.replaceWith(...el.childNodes);
-  });
-  let out = doc.body.firstChild.innerHTML;
-  out = out.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>').replace(/^(\s|<br\s*\/?>)+|(\s|<br\s*\/?>)+$/gi, '');
-  return out;
+/** Usa o cartão atual se ainda existir; senão, a cópia salva na anotação. */
+function entrySnap(e) {
+  const card = Store.S.cards.get(e.cid);
+  const live = card && cardSnap(card);
+  if (live) return live;
+  if (e.q || e.a) return { q: e.q || '', a: e.a || '', css: e.css || '' };
+  return { q: '', a: e.back || '', css: '' }; // anotações antigas (só verso)
 }
 const nbText = html => normTxt(Render.stripHTML(html || ''));
-async function fillVerso(el, html) {
-  el.innerHTML = html ? await Render.inlineMedia(html, Store.mediaDataURL) : '<span class="muted">Cartão sem verso.</span>';
-  // títulos em caixa alta ("POR QUE:", "LEI:") viram rótulos destacados
-  for (const b of el.querySelectorAll('div,p')) {
-    if (b.querySelector('div,p,img')) continue;
-    const t = b.textContent.replace(/\s+/g, ' ').trim();
-    if (t.length >= 3 && t.length <= 40 && t === t.toUpperCase() && /[A-ZÀ-Ú]{3}/.test(t)) b.classList.add('nb-k');
-  }
-}
 const fmtDate = ts => { const d = new Date(ts); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''); };
 
+// ---------- Miniatura do cartão ----------
+const MINI_W = 390; // largura "de celular" usada para desenhar o cartão antes de reduzir
+const MINI_CSS = 'html,body{min-height:0!important;height:auto!important;overflow:hidden!important}body{display:block!important}';
+const miniWaiters = new Map(); let miniSeq = 0;
+window.addEventListener('message', ev => { const d = ev.data; if (d && d.t === 'mini' && miniWaiters.has(d.id)) miniWaiters.get(d.id)(d.h, d.o || 0); });
+async function miniDoc(html, css, id, front) {
+  const body = await Render.inlineMedia(html, Store.mediaDataURL);
+  // No verso, acha onde a resposta começa (o que não estava na frente) para a miniatura abrir ali.
+  const F = JSON.stringify(front ? Render.stripHTML(front).replace(/\s+/g, ' ').trim().toLowerCase() : '').replace(/</g, '\\u003c');
+  const measure = `<script>(function(){var F=${F};var N=function(t){return (t||'').replace(/\\s+/g,' ').trim().toLowerCase()};` +
+    `var off=function(){if(!F)return 0;var hr=document.getElementById('answer');if(hr)return hr.getBoundingClientRect().bottom;var all=document.querySelectorAll('#qa *');for(var i=0;i<all.length;i++){var el=all[i];if(el.children.length&&N(el.textContent)!==N(el.children[0].textContent))continue;var t=N(el.textContent);if(t.length>1&&F.indexOf(t)<0){var r=el.getBoundingClientRect();if(r.height>0)return r.top}}return 0};` +
+    `var s=function(){var q=document.getElementById('qa'),r=q.getBoundingClientRect(),h=Math.ceil(Math.max(r.bottom+14,document.body.scrollHeight));var o=Math.max(0,Math.floor(off()-16));parent.postMessage({t:'mini',id:${id},h:h,o:o<40?0:o},'*')};` +
+    `addEventListener('load',s);[].forEach.call(document.images,function(i){i.addEventListener('load',s)});setTimeout(s,60);setTimeout(s,400);setTimeout(s,1500)})();<\/script>`;
+  return cardDoc(body, (css || '') + MINI_CSS, darkMode()).replace(/<\/body>/, measure + '</body>');
+}
+/**
+ * Miniatura que vira entre frente e verso ao toque.
+ * maxH: altura máxima visível (px); se o cartão for maior, aparece "Ampliar".
+ */
+function miniCard(snap, { maxH = 440, startBack = false } = {}) {
+  const wrap = h('div', { class: 'mc' });
+  const stage = h('div', { class: 'mc-stage' });
+  const tag = h('span', { class: 'mc-tag' });
+  const zoom = h('button', { class: 'mc-zoom', style: 'display:none', onclick: e => { e.stopPropagation(); cardViewer(snap, side); } }, '⤢ Ampliar');
+  const hit = h('div', { class: 'mc-hit', role: 'button', 'aria-label': 'Virar cartão', onclick: flip });
+  wrap.append(stage, hit, h('div', { class: 'mc-bar' }, tag, snap.q ? h('span', { class: 'mc-hint' }, '↻ toque para virar') : null, zoom));
+  const faces = {}, hs = {}, offs = {};
+  let side = startBack || !snap.q ? 'a' : 'q', busy = false;
+  function make(k) {
+    const id = ++miniSeq;
+    const fr = h('iframe', { class: 'mc-frame', sandbox: 'allow-scripts', tabindex: '-1', 'aria-hidden': 'true', scrolling: 'no' });
+    fr.style.width = MINI_W + 'px'; fr.style.height = '600px';
+    miniWaiters.set(id, (hh, o) => { hs[k] = hh; offs[k] = o; fr.style.height = hh + 'px'; if (k === side) layout(); });
+    miniDoc(snap[k], snap.css, id, k === 'a' ? snap.q : '').then(doc => { fr.srcdoc = doc; });
+    faces[k] = fr; stage.append(fr);
+  }
+  function scale() { return Math.min(1, (stage.clientWidth || wrap.clientWidth || 320) / MINI_W); }
+  function layout() {
+    const s = scale();
+    for (const k in faces) { faces[k].style.transform = `scale(${s}) translateY(${-(offs[k] || 0)}px)`; faces[k].style.visibility = k === side ? 'visible' : 'hidden'; }
+    const full = ((hs[side] || 300) - (offs[side] || 0)) * s;
+    stage.style.height = Math.min(full, maxH) + 'px';
+    const clipped = full > maxH + 4;
+    wrap.classList.toggle('clipped', clipped); zoom.style.display = clipped ? '' : 'none';
+    tag.textContent = side === 'q' ? 'Frente' : 'Verso';
+    wrap.classList.toggle('back', side === 'a');
+  }
+  async function flip() {
+    if (busy || !snap.q) return; busy = true;
+    const ease = { duration: 170, easing: 'ease-in', fill: 'forwards' };
+    try { await wrap.animate([{ transform: 'perspective(900px) rotateY(0)' }, { transform: 'perspective(900px) rotateY(90deg)' }], ease).finished; } catch (e) { /* sem animação */ }
+    side = side === 'q' ? 'a' : 'q'; layout();
+    try { await wrap.animate([{ transform: 'perspective(900px) rotateY(-90deg)' }, { transform: 'perspective(900px) rotateY(0)' }], { ...ease, easing: 'ease-out' }).finished; } catch (e) { /* sem animação */ }
+    try { wrap.getAnimations().forEach(a => a.cancel()); } catch (e) { /* ignore */ }
+    busy = false;
+  }
+  if (snap.q) make('q');
+  make('a');
+  requestAnimationFrame(layout);
+  if (window.ResizeObserver) new ResizeObserver(() => layout()).observe(stage);
+  return wrap;
+}
+/** Cartão em tamanho real, rolável, com botão para alternar frente/verso. */
+function cardViewer(snap, start = 'q') {
+  let side = start;
+  const frame = h('iframe', { class: 'mc-big', sandbox: 'allow-scripts' });
+  const btn = h('button', { class: 'btn primary', onclick: () => { side = side === 'q' ? 'a' : 'q'; draw(); } });
+  const draw = async () => { frame.srcdoc = cardDoc(await Render.inlineMedia(snap[side], Store.mediaDataURL), snap.css, darkMode()); btn.textContent = side === 'q' ? '↻ Ver verso' : '↻ Ver frente'; };
+  const m = modal([h('div', { class: 'nb-top' }, h('h3', null, 'Cartão'), h('button', { class: 'btn small', onclick: () => m.close() }, 'Fechar')), frame,
+    snap.q ? h('div', { class: 'row end' }, btn) : null], { full: true });
+  draw();
+}
+
+// ---------- Escrever / editar anotação ----------
 /** Folha para escrever/editar a anotação de um cartão. onDone(entry|null) após salvar/excluir. */
 function annotationSheet(card, onDone = () => {}, entryArg = null) {
   const entry = entryArg || Store.annotationFor(card.id);
-  const back = (Store.S.cards.has(card.id) && versoOf(Store.S.cards.get(card.id))) || (entry && entry.back) || '';
-  const prev = h('div', { class: 'nb-verso' });
-  fillVerso(prev, back);
-  const ta = h('textarea', { class: 'input nb-ta', rows: 5, placeholder: 'Escreva aqui o que você quer lembrar: a pegadinha, o macete, onde você errou…', value: entry ? entry.text : '' });
+  const live = Store.S.cards.has(card.id) ? cardSnap(Store.S.cards.get(card.id)) : null;
+  const snap = live || (entry ? entrySnap(entry) : { q: '', a: '', css: '' });
+  const ta = h('textarea', { class: 'input nb-ta', rows: 4, placeholder: 'Escreva aqui o que você quer lembrar: a pegadinha, o macete, onde você errou…', value: entry ? entry.text : '' });
   const save = async () => {
     const text = ta.value.trim();
     if (!text) { ta.focus(); toast('Escreva a anotação primeiro'); return; }
-    const e = await Store.saveAnnotation(card, text, back);
+    const e = await Store.saveAnnotation(card, text, live ? { q: live.q, a: live.a, css: live.css } : null);
+    if (e.back && e.q) delete e.back;
     m.close(); toast(entry ? 'Anotação atualizada' : '📒 Salvo no caderno'); onDone(e);
   };
   const m = modal([
     h('div', { class: 'nb-head' }, h('span', { class: 'nb-ic', html: PENCIL_SVG }), h('h3', null, entry ? 'Editar anotação' : 'Nova anotação')),
-    h('div', { class: 'nb-lbl' }, 'Verso do cartão'), prev,
+    h('div', { class: 'nb-lbl' }, 'Cartão'), miniCard(snap, { maxH: 230 }),
     h('div', { class: 'nb-lbl' }, 'Sua anotação'), ta,
     h('div', { class: 'row end nb-acts' },
       entry ? h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox('Excluir esta anotação do caderno?', 'Excluir', true)) { await Store.deleteAnnotation(entry.id); m.close(); toast('Anotação excluída'); onDone(null); } } }, 'Excluir') : null,
       h('span', { style: 'flex:1' }),
       h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'),
       h('button', { class: 'btn primary', onclick: save }, 'Salvar'))]);
-  setTimeout(() => ta.focus(), 60);
 }
 
+// ---------- Caderno ----------
 /** Botão de acesso ao caderno, mostrado acima da busca na aba Baralhos. */
 function notebookTile() {
   const n = Store.S.notebook.length;
@@ -2009,10 +2043,15 @@ function openNotebook() {
     if (!all.length) {
       list.append(h('div', { class: 'nb-empty' }, h('div', { class: 'nb-empty-ic', html: PENCIL_SVG }),
         h('b', null, 'Seu caderno está vazio'),
-        h('p', { class: 'muted' }, 'Durante o estudo, toque no lápis no canto do cartão para anotar uma pegadinha, um macete ou o motivo do erro. O verso do cartão e a sua anotação aparecem aqui.')));
+        h('p', { class: 'muted' }, 'Durante o estudo, toque no lápis no canto do cartão para anotar uma pegadinha, um macete ou o motivo do erro. O cartão e a sua anotação aparecem aqui.')));
       return;
     }
-    const items = all.filter(e => (!deckF || rootOf(e) === deckF) && (!query || normTxt(e.text).includes(query) || nbText(e.back).includes(query) || normTxt(e.deck || '').includes(query)));
+    const items = all.filter(e => {
+      if (deckF && rootOf(e) !== deckF) return false;
+      if (!query) return true;
+      const sn = entrySnap(e);
+      return normTxt(e.text).includes(query) || nbText(sn.q + ' ' + sn.a).includes(query) || normTxt(e.deck || '').includes(query);
+    });
     if (!items.length) { list.append(h('div', { class: 'empty' }, 'Nenhuma anotação encontrada.')); return; }
     const groups = new Map();
     for (const e of items) { const k = e.deck || 'Sem baralho'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
@@ -2025,11 +2064,8 @@ function openNotebook() {
   }
   function entryCard(e) {
     const card = Store.S.cards.get(e.cid);
-    const verso = h('div', { class: 'nb-verso clip' });
-    const more = h('button', { class: 'nb-more', style: 'display:none', onclick: () => { const open = verso.classList.toggle('clip'); more.textContent = open ? 'Ver verso completo ▾' : 'Recolher ▴'; } }, 'Ver verso completo ▾');
-    fillVerso(verso, (card && versoOf(card)) || e.back).then(() => requestAnimationFrame(() => { if (verso.scrollHeight > verso.clientHeight + 8) more.style.display = ''; else verso.classList.remove('clip'); }));
     return h('article', { class: 'nb-entry' },
-      h('div', { class: 'nb-sec' }, h('div', { class: 'nb-lbl' }, 'Verso'), verso, more),
+      miniCard(entrySnap(e)),
       h('div', { class: 'nb-note' }, h('div', { class: 'nb-lbl' }, h('span', { class: 'nb-mini', html: PENCIL_SVG }), 'Minha anotação'), h('div', { class: 'nb-txt' }, e.text)),
       h('div', { class: 'nb-foot' }, h('span', { class: 'muted s' }, (e.updated !== e.created ? 'Editada em ' : '') + fmtDate(e.updated)),
         h('span', { class: 'row' },
