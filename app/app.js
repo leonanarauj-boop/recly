@@ -559,7 +559,7 @@ if (typeof module !== 'undefined') module.exports = Render;
 // Armazenamento local (IndexedDB) + estado em memória. Tudo funciona offline.
 const Store = (() => {
   let idb;
-  const S = { decks: new Map(), models: new Map(), notes: new Map(), cards: new Map(), daily: null, prefs: {} };
+  const S = { decks: new Map(), models: new Map(), notes: new Map(), cards: new Map(), daily: null, prefs: {}, notebook: [] };
   const STORES = ['decks', 'models', 'notes', 'cards', 'revlog', 'media', 'meta'];
   let lastId = 0;
   const newId = () => { let t = Date.now(); if (t <= lastId) t = lastId + 1; lastId = t; return t; };
@@ -616,7 +616,22 @@ const Store = (() => {
     S.daily = m ? m.value : null;
     const pr = metas.find(x => x.key === 'prefs');
     S.prefs = pr ? pr.value : {};
+    const nb = metas.find(x => x.key === 'notebook');
+    S.notebook = nb && Array.isArray(nb.value) ? nb.value : [];
   }
+
+  // ---------- Caderno de anotações ----------
+  const saveNotebook = () => put('meta', { key: 'notebook', value: S.notebook });
+  const annotationFor = cid => S.notebook.find(e => e.cid === cid) || null;
+  async function saveAnnotation(card, text, back) {
+    const now = Date.now(), dk = S.decks.get(card.did);
+    let e = annotationFor(card.id);
+    if (!e) { e = { id: newId(), cid: card.id, nid: card.nid, created: now }; S.notebook.push(e); }
+    Object.assign(e, { did: card.did, deck: dk ? dk.name : (e.deck || ''), text, back, updated: now });
+    await saveNotebook(); return e;
+  }
+  async function deleteAnnotation(id) { S.notebook = S.notebook.filter(e => e.id !== id); await saveNotebook(); }
+  async function setNotebook(arr) { S.notebook = Array.isArray(arr) ? arr : []; await saveNotebook(); }
 
   // ---------- Dia / contadores ----------
   function ensureDay() {
@@ -930,7 +945,7 @@ const Store = (() => {
     await putMany('cards', cards); await putMany('revlog', revlog);
   }
   async function resetAll() {
-    await clearAll(); S.decks = new Map(); S.models = new Map(); S.notes = new Map(); S.cards = new Map(); S.daily = null;
+    await clearAll(); S.decks = new Map(); S.models = new Map(); S.notes = new Map(); S.cards = new Map(); S.daily = null; S.notebook = [];
     await seedModels(); await createDeck('Padrão'); ensureDay();
   }
   const rawRevlog = () => getAll('revlog');
@@ -938,7 +953,8 @@ const Store = (() => {
 
   return { S, init, newId, clearAll, loadAll, put, putMany, delMany, deckList, inTree, treeIds, createDeck, saveDeck, renameDeck, deleteDeck,
     getPref, setPref, deckStats, counts, buildQueue, answerCard, undoAnswer, addNote, updateNote, deleteNote, setSuspended, resetCard, moveCards, search, stats,
-    resetAll, putMedia, getMedia, mediaDataURL, allMediaNames, bulk, rawRevlog, rawMedia, ensureDay, seedModels };
+    resetAll, putMedia, getMedia, mediaDataURL, allMediaNames, bulk, rawRevlog, rawMedia, ensureDay, seedModels,
+    annotationFor, saveAnnotation, deleteAnnotation, setNotebook };
 })();
 
 // Importação/exportação: .apkg (Anki 2.1 legado), texto/CSV e backup completo.
@@ -1244,7 +1260,7 @@ const Apkg = (() => {
   // ---------- Backup completo ----------
   async function backup(progress = () => {}) {
     const S = Store.S, zip = new JSZip();
-    zip.file('data.json', JSON.stringify({ v: 1, decks: [...S.decks.values()], models: [...S.models.values()], notes: [...S.notes.values()], cards: [...S.cards.values()], daily: S.daily, prefs: S.prefs }));
+    zip.file('data.json', JSON.stringify({ v: 1, decks: [...S.decks.values()], models: [...S.models.values()], notes: [...S.notes.values()], cards: [...S.cards.values()], daily: S.daily, prefs: S.prefs, notebook: S.notebook }));
     zip.file('revlog.json', JSON.stringify(await Store.rawRevlog()));
     let i = 0; const media = await Store.rawMedia();
     for (const m of media) { zip.file('media/' + m.name, m.blob); if (++i % 50 === 0) progress(`Mídia ${i}/${media.length}`); }
@@ -1262,6 +1278,7 @@ const Apkg = (() => {
     await Store.bulk({ decks: data.decks, models: data.models, notes: data.notes, cards: data.cards, revlog: rev });
     await Store.put('meta', { key: 'daily', value: data.daily });
     if (data.prefs) await Store.put('meta', { key: 'prefs', value: data.prefs });
+    await Store.put('meta', { key: 'notebook', value: Array.isArray(data.notebook) ? data.notebook : [] });
     let i = 0; const names = Object.keys(zip.files).filter(n => n.startsWith('media/') && !zip.files[n].dir);
     for (const n of names) { await Store.putMedia(n.slice(6), await zip.file(n).async('blob')); if (++i % 25 === 0) { progress(`Mídia ${i}/${names.length}`); await tick(); } }
     await Store.loadAll(); Store.ensureDay();
@@ -1628,7 +1645,9 @@ function startStudy(deck, mode = 'normal') {
   let q = Store.buildQueue(deck, mode), cur = null, showing = false, startedAt = 0, history = [], typed;
   const counts = h('div', { class: 'scounts' });
   const frame = h('iframe', { class: 'cardframe', title: 'cartão', sandbox: 'allow-scripts allow-popups allow-popups-to-escape-sandbox' });
-  const scroller = h('div', { class: 'cardscroll' }, frame);
+  const pencil = h('button', { class: 'pencil', 'aria-label': 'Anotar neste cartão', title: 'Anotar', html: PENCIL_SVG, onclick: () => { if (cur) annotationSheet(cur, updPencil); } });
+  const scroller = h('div', { class: 'cardscroll' }, frame, pencil);
+  function updPencil() { const has = !!(cur && Store.annotationFor(cur.id)); pencil.classList.toggle('has', has); pencil.style.display = cur ? '' : 'none'; pencil.setAttribute('aria-label', has ? 'Ver anotação deste cartão' : 'Anotar neste cartão'); }
   const bottom = h('div', { class: 'sbottom' });
   const root = h('div', { class: 'study' },
     h('div', { class: 'stop' }, h('button', { class: 'btn small', onclick: exit }, '‹ Sair'), counts,
@@ -1664,6 +1683,7 @@ function startStudy(deck, mode = 'normal') {
     const r = Render.render(note, model, cur, answer, { deckName: dk.name, typed });
     const html = await Render.inlineMedia(r.html, Store.mediaDataURL);
     frame.srcdoc = cardDoc(html, r.css, darkMode());
+    updPencil();
     return { r, html };
   }
   let qSounds = [];
@@ -1715,6 +1735,7 @@ function startStudy(deck, mode = 'normal') {
     bottom.append(h('button', { class: 'btn primary big wide', onclick: reveal }, 'Mostrar resposta'));
   }
   function finished() {
+    cur = null; updPencil();
     frame.srcdoc = cardDoc('<h2>🎉 Parabéns!</h2><p>Você terminou este baralho por agora.</p>', '', darkMode());
     bottom.innerHTML = ''; bottom.append(h('button', { class: 'btn primary big wide', onclick: exit }, 'Voltar'));
   }
@@ -1724,6 +1745,7 @@ function startStudy(deck, mode = 'normal') {
     const m = modal([h('div', { class: 'col' },
       h('button', { class: 'btn', onclick: act(undo) }, '↩ Desfazer última resposta'),
       h('button', { class: 'btn', onclick: act(async () => { const c = cur; await Store.setSuspended(c, true); cur = null; show(); }) }, '⏸ Suspender cartão'),
+      h('button', { class: 'btn', onclick: act(async () => annotationSheet(cur, updPencil)) }, Store.annotationFor(cur.id) ? '📒 Ver anotação' : '📒 Anotar no caderno'),
       h('button', { class: 'btn', onclick: act(async () => { const note = Store.S.notes.get(cur.nid); editNoteSheet(note, () => draw(showing)); }) }, '✎ Editar nota'),
       h('button', { class: 'btn', onclick: act(async () => { const s = Render.sounds((await draw(showing)).r.html); if (s[0]) playSound(s[0]); }) }, '🔊 Repetir áudio'),
       h('button', { class: 'btn danger', onclick: act(async () => { if (await confirmBox('Excluir esta nota e seus cartões?', 'Excluir', true)) { const id = cur.nid; await Store.deleteNote(id); q.learn = q.learn.filter(sibling(id)); q.rev = q.rev.filter(sibling(id)); q.nw = q.nw.filter(sibling(id)); cur = null; show(); } }) }, '🗑 Excluir nota'),
@@ -1736,7 +1758,7 @@ function startStudy(deck, mode = 'normal') {
     else if (k === 'z' || k === 'u') undo();
   }
   function onKey(e) {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.key === ' ' || e.key === 'Enter') e.preventDefault();
     handleKey(e.key);
   }
@@ -1809,7 +1831,7 @@ function viewDecks(v) {
   const chips = h('div', { class: 'chips' }, chipDue,
     h('button', { class: 'chip2', onclick: () => { setCollapsed(new Set([...hasKids])); renderList(); } }, '⊟ Recolher'),
     h('button', { class: 'chip2', onclick: () => { setCollapsed(new Set()); renderList(); } }, '⊞ Expandir'));
-  v.append(q, chips, list);
+  v.append(notebookTile(), q, chips, list);
 
   function renderList() {
     list.innerHTML = '';
@@ -1861,6 +1883,160 @@ function deckSheet(d) {
         h('button', { class: 'btn', onclick: async () => { const n = await promptBox('Renomear baralho', d.name); if (n && n !== d.name) { m.close(); await Store.renameDeck(d, n); refresh(); } } }, '✎ Renomear'),
         h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox(`Excluir "${d.name}" e todos os seus cartões? Isso não pode ser desfeito.`, 'Excluir', true)) { m.close(); await Store.deleteDeck(d); refresh(); } } }, '🗑 Excluir')),
       h('button', { class: 'btn', onclick: () => m.close() }, 'Fechar'))]);
+}
+
+// Caderno de anotações: lápis flutuante no estudo + caderno na aba Baralhos.
+const PENCIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
+/** HTML limpo do verso do cartão (sem a frente, sem scripts/estilos). Mantém nomes de mídia. */
+function versoOf(card) {
+  const note = Store.S.notes.get(card.nid); if (!note) return null;
+  const model = Store.S.models.get(note.mid); if (!model) return null;
+  const dk = Store.S.decks.get(card.did);
+  const opts = { deckName: dk ? dk.name : '' };
+  const full = Render.render(note, model, card, true, opts).html;
+  const m = full.match(/<hr[^>]*id\s*=\s*["']?answer["']?[^>]*>/i);
+  let html = cleanHTML(m ? full.slice(m.index + m[0].length) : full);
+  if (!m) html = withoutFront(html, cleanHTML(Render.render(note, model, card, false, opts).html));
+  if (!Render.stripHTML(html).trim() && !/<img/i.test(html)) html = cleanHTML(full);
+  return html;
+}
+/** Remove do verso os blocos que já aparecem na frente (modelos que repetem a pergunta no verso). */
+function withoutFront(ans, front) {
+  const key = el => (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const fd = new DOMParser().parseFromString('<div>' + front + '</div>', 'text/html');
+  const seen = new Set([...fd.body.querySelectorAll('*')].map(key).filter(Boolean));
+  const ad = new DOMParser().parseFromString('<div>' + ans + '</div>', 'text/html');
+  const root = ad.body.firstChild;
+  for (const el of [...root.querySelectorAll('*')]) {
+    if (!el.isConnected || el.querySelector('img')) continue;
+    const k = key(el); if (!k || !seen.has(k)) continue;
+    const par = el.parentElement; // palavra/trecho dentro de uma frase (ex.: "GABARITO: CERTO"): mantém
+    if (/^(SPAN|B|I|U|EM|STRONG|FONT|SUB|SUP|MARK|SMALL|CODE)$/.test(el.tagName) && par !== root && key(par) !== k) continue;
+    el.remove();
+  }
+  // nós de texto soltos iguais a trechos da frente
+  [...root.childNodes].filter(n => n.nodeType === 3 && seen.has(n.textContent.replace(/\s+/g, ' ').trim().toLowerCase())).forEach(n => n.remove());
+  let out = root.innerHTML.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>').replace(/^(\s|<br\s*\/?>)+|(\s|<br\s*\/?>)+$/gi, '');
+  return Render.stripHTML(out).trim() || /<img/i.test(out) ? out : ans;
+}
+function cleanHTML(html) {
+  const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html');
+  doc.querySelectorAll('script,style,link,meta,iframe,object,embed,input,textarea,button,select,audio,video,source,a.replay,svg').forEach(e => e.remove());
+  doc.querySelectorAll('*').forEach(el => {
+    for (const a of [...el.attributes]) {
+      const n = a.name.toLowerCase();
+      const keep = (n === 'src' && el.tagName === 'IMG') || (n === 'alt') || (n === 'colspan') || (n === 'rowspan') || (n === 'class' && /\bcloze\b/.test(a.value));
+      if (!keep) el.removeAttribute(a.name);
+    }
+    if (el.tagName === 'A') el.replaceWith(...el.childNodes);
+  });
+  let out = doc.body.firstChild.innerHTML;
+  out = out.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>').replace(/^(\s|<br\s*\/?>)+|(\s|<br\s*\/?>)+$/gi, '');
+  return out;
+}
+const nbText = html => normTxt(Render.stripHTML(html || ''));
+async function fillVerso(el, html) {
+  el.innerHTML = html ? await Render.inlineMedia(html, Store.mediaDataURL) : '<span class="muted">Cartão sem verso.</span>';
+  // títulos em caixa alta ("POR QUE:", "LEI:") viram rótulos destacados
+  for (const b of el.querySelectorAll('div,p')) {
+    if (b.querySelector('div,p,img')) continue;
+    const t = b.textContent.replace(/\s+/g, ' ').trim();
+    if (t.length >= 3 && t.length <= 40 && t === t.toUpperCase() && /[A-ZÀ-Ú]{3}/.test(t)) b.classList.add('nb-k');
+  }
+}
+const fmtDate = ts => { const d = new Date(ts); return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : ''); };
+
+/** Folha para escrever/editar a anotação de um cartão. onDone(entry|null) após salvar/excluir. */
+function annotationSheet(card, onDone = () => {}, entryArg = null) {
+  const entry = entryArg || Store.annotationFor(card.id);
+  const back = (Store.S.cards.has(card.id) && versoOf(Store.S.cards.get(card.id))) || (entry && entry.back) || '';
+  const prev = h('div', { class: 'nb-verso' });
+  fillVerso(prev, back);
+  const ta = h('textarea', { class: 'input nb-ta', rows: 5, placeholder: 'Escreva aqui o que você quer lembrar: a pegadinha, o macete, onde você errou…', value: entry ? entry.text : '' });
+  const save = async () => {
+    const text = ta.value.trim();
+    if (!text) { ta.focus(); toast('Escreva a anotação primeiro'); return; }
+    const e = await Store.saveAnnotation(card, text, back);
+    m.close(); toast(entry ? 'Anotação atualizada' : '📒 Salvo no caderno'); onDone(e);
+  };
+  const m = modal([
+    h('div', { class: 'nb-head' }, h('span', { class: 'nb-ic', html: PENCIL_SVG }), h('h3', null, entry ? 'Editar anotação' : 'Nova anotação')),
+    h('div', { class: 'nb-lbl' }, 'Verso do cartão'), prev,
+    h('div', { class: 'nb-lbl' }, 'Sua anotação'), ta,
+    h('div', { class: 'row end nb-acts' },
+      entry ? h('button', { class: 'btn danger', onclick: async () => { if (await confirmBox('Excluir esta anotação do caderno?', 'Excluir', true)) { await Store.deleteAnnotation(entry.id); m.close(); toast('Anotação excluída'); onDone(null); } } }, 'Excluir') : null,
+      h('span', { style: 'flex:1' }),
+      h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'),
+      h('button', { class: 'btn primary', onclick: save }, 'Salvar'))]);
+  setTimeout(() => ta.focus(), 60);
+}
+
+/** Botão de acesso ao caderno, mostrado acima da busca na aba Baralhos. */
+function notebookTile() {
+  const n = Store.S.notebook.length;
+  return h('button', { class: 'nb-tile', onclick: openNotebook },
+    h('span', { class: 'nb-book' }, '📒'),
+    h('span', { class: 'nb-tt' }, h('b', null, 'Caderno de anotações'),
+      h('small', null, n ? `${n} ${n === 1 ? 'anotação' : 'anotações'}` : 'Toque no lápis ✎ durante o estudo para anotar')),
+    h('span', { class: 'nb-chev' }, '›'));
+}
+
+function openNotebook() {
+  let query = '', deckF = '';
+  const list = h('div', { class: 'nb-list' });
+  const search = h('input', { class: 'input', type: 'search', placeholder: '🔎 Buscar nas anotações…', autocapitalize: 'off', oninput: () => { query = normTxt(search.value.trim()); draw(); } });
+  const chips = h('div', { class: 'chips nb-chips' });
+  const count = h('div', { class: 'muted s' });
+  const m = modal([
+    h('div', { class: 'nb-top' }, h('div', null, h('h3', null, '📒 Caderno de anotações'), count),
+      h('button', { class: 'btn small', onclick: () => { m.close(); refresh(); } }, 'Fechar')),
+    search, chips, list], { full: true });
+
+  const rootOf = e => (e.deck || 'Sem baralho').split('::')[0];
+  function drawChips() {
+    const roots = [...new Set(Store.S.notebook.map(rootOf))].sort((a, b) => a.localeCompare(b, 'pt'));
+    chips.innerHTML = '';
+    if (roots.length < 2) { chips.style.display = 'none'; deckF = ''; return; }
+    chips.style.display = '';
+    const mk = (val, label) => h('button', { class: 'chip2' + (deckF === val ? ' on' : ''), onclick: () => { deckF = val; drawChips(); draw(); } }, label);
+    chips.append(mk('', 'Todos'), roots.map(r => mk(r, r)));
+  }
+  function draw() {
+    const all = Store.S.notebook;
+    count.textContent = all.length ? `${all.length} ${all.length === 1 ? 'anotação' : 'anotações'}` : '';
+    list.innerHTML = '';
+    if (!all.length) {
+      list.append(h('div', { class: 'nb-empty' }, h('div', { class: 'nb-empty-ic', html: PENCIL_SVG }),
+        h('b', null, 'Seu caderno está vazio'),
+        h('p', { class: 'muted' }, 'Durante o estudo, toque no lápis no canto do cartão para anotar uma pegadinha, um macete ou o motivo do erro. O verso do cartão e a sua anotação aparecem aqui.')));
+      return;
+    }
+    const items = all.filter(e => (!deckF || rootOf(e) === deckF) && (!query || normTxt(e.text).includes(query) || nbText(e.back).includes(query) || normTxt(e.deck || '').includes(query)));
+    if (!items.length) { list.append(h('div', { class: 'empty' }, 'Nenhuma anotação encontrada.')); return; }
+    const groups = new Map();
+    for (const e of items) { const k = e.deck || 'Sem baralho'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
+    for (const k of [...groups.keys()].sort((a, b) => a.localeCompare(b, 'pt', { numeric: true }))) {
+      const arr = groups.get(k).sort((a, b) => b.updated - a.updated), parts = k.split('::');
+      list.append(h('div', { class: 'nb-group' },
+        h('div', { class: 'nb-gh' }, h('span', null, parts[parts.length - 1]), parts.length > 1 ? h('small', null, parts.slice(0, -1).join(' › ')) : null, h('i', null, arr.length)),
+        arr.map(entryCard)));
+    }
+  }
+  function entryCard(e) {
+    const card = Store.S.cards.get(e.cid);
+    const verso = h('div', { class: 'nb-verso clip' });
+    const more = h('button', { class: 'nb-more', style: 'display:none', onclick: () => { const open = verso.classList.toggle('clip'); more.textContent = open ? 'Ver verso completo ▾' : 'Recolher ▴'; } }, 'Ver verso completo ▾');
+    fillVerso(verso, (card && versoOf(card)) || e.back).then(() => requestAnimationFrame(() => { if (verso.scrollHeight > verso.clientHeight + 8) more.style.display = ''; else verso.classList.remove('clip'); }));
+    return h('article', { class: 'nb-entry' },
+      h('div', { class: 'nb-sec' }, h('div', { class: 'nb-lbl' }, 'Verso'), verso, more),
+      h('div', { class: 'nb-note' }, h('div', { class: 'nb-lbl' }, h('span', { class: 'nb-mini', html: PENCIL_SVG }), 'Minha anotação'), h('div', { class: 'nb-txt' }, e.text)),
+      h('div', { class: 'nb-foot' }, h('span', { class: 'muted s' }, (e.updated !== e.created ? 'Editada em ' : '') + fmtDate(e.updated)),
+        h('span', { class: 'row' },
+          h('button', { class: 'btn small', onclick: () => annotationSheet(card || { id: e.cid, nid: e.nid, did: e.did }, () => { drawChips(); draw(); }, e) }, '✎ Editar'),
+          h('button', { class: 'btn small danger', onclick: async () => { if (await confirmBox('Excluir esta anotação do caderno?', 'Excluir', true)) { await Store.deleteAnnotation(e.id); drawChips(); draw(); } } }, 'Excluir'))));
+  }
+  drawChips(); draw();
 }
 
 // Interface: navegador, adicionar, estatísticas, ajustes e opções do baralho.
