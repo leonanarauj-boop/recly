@@ -2018,6 +2018,7 @@ function notebookTile() {
 
 function openNotebook() {
   let query = '', deckF = '';
+  const opened = new Set();
   const list = h('div', { class: 'nb-list' });
   const search = h('input', { class: 'input', type: 'search', placeholder: '🔎 Buscar nas anotações…', autocapitalize: 'off', oninput: () => { query = normTxt(search.value.trim()); draw(); } });
   const chips = h('div', { class: 'chips nb-chips' });
@@ -2055,11 +2056,23 @@ function openNotebook() {
     if (!items.length) { list.append(h('div', { class: 'empty' }, 'Nenhuma anotação encontrada.')); return; }
     const groups = new Map();
     for (const e of items) { const k = e.deck || 'Sem baralho'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(e); }
-    for (const k of [...groups.keys()].sort((a, b) => a.localeCompare(b, 'pt', { numeric: true }))) {
+    const keys = [...groups.keys()].sort((a, b) => a.localeCompare(b, 'pt', { numeric: true }));
+    for (const k of keys) {
       const arr = groups.get(k).sort((a, b) => b.updated - a.updated), parts = k.split('::');
-      list.append(h('div', { class: 'nb-group' },
-        h('div', { class: 'nb-gh' }, h('span', null, parts[parts.length - 1]), parts.length > 1 ? h('small', null, parts.slice(0, -1).join(' › ')) : null, h('i', null, arr.length)),
-        arr.map(entryCard)));
+      const isOpen = () => !!query || keys.length === 1 || opened.has(k);
+      const body = h('div', { class: 'nb-gbody' });
+      const grp = h('div', { class: 'nb-group' });
+      const head = h('button', { class: 'nb-gh', 'aria-expanded': 'false', onclick: () => { opened.has(k) ? opened.delete(k) : opened.add(k); paint(); } },
+        h('span', { class: 'nb-gic' }, '📒'),
+        h('span', { class: 'nb-gtt' }, h('b', null, parts[parts.length - 1]), parts.length > 1 ? h('small', null, parts.slice(0, -1).join(' › ')) : null),
+        h('i', null, arr.length), h('span', { class: 'nb-gchev' }, '›'));
+      const paint = () => {
+        const o = isOpen();
+        grp.classList.toggle('open', o); head.setAttribute('aria-expanded', o ? 'true' : 'false');
+        if (o && !body.childElementCount) body.append(...arr.map(entryCard));
+        if (!o) body.innerHTML = ''; // recolhido: libera as miniaturas
+      };
+      grp.append(head, body); list.append(grp); paint();
     }
   }
   function entryCard(e) {
